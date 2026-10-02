@@ -1,56 +1,179 @@
-# Welcome to your Expo app 👋
+# Voice — on-device voice notes with transcription
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A voice recorder for Android and iOS that turns speech into text **entirely on the phone**.
+No account, no API key, no server: audio is recorded, stored and transcribed locally with
+[Whisper](https://github.com/openai/whisper) (via [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+and [`whisper.rn`](https://github.com/mybigday/whisper.rn)).
 
-## Get started
+The interface is modeled on Apple's Voice Memos: a white, airy layout with frosted-glass cards,
+pills and tab bar.
 
-1. Install dependencies
+| | |
+|---|---|
+| **Platforms** | Android (tested on a Galaxy S20 FE), iOS (builds from the same code, not yet tested on device), Web (UI preview only) |
+| **Languages** | Persian (فارسی), English, Italian, or automatic detection |
+| **Stack** | Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript · Reanimated 4 |
+| **Privacy** | Audio never leaves the device. The only network request is the one-time model download. |
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## Features
 
-   ```bash
-   npx expo start
-   ```
+**Record**
+- One-tap recording with pause, resume, discard and save.
+- Live scrolling waveform and a precise timer (`00:00,00`).
+- **Live transcript** card: text appears while you speak (a rolling Whisper preview, updated about every 1.5 s).
+- Per-take language switch: `فارسی` / `EN` / `IT`.
 
-In the output, you'll find options to open the app in a
+**Archive**
+- All recordings with search across titles *and* transcript text.
+- Filters: All · Favorites · Transcribed.
+- Status chips per recording: *Transcribing n%*, *Text*, *Retry*.
+- Detail screen with a scrubbable waveform, playback speed, ±15 s skip, rename, favorite and delete.
+- Time-coded transcript that highlights and follows the audio as it plays; tap a line to jump there; copy all text.
+- Right-to-left layout for Persian text.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+**Profile**
+- Weekly activity stats.
+- Transcription settings: default language, speech model, live transcript on/off.
+- Model manager: download, switch and delete Whisper models, with progress.
+- Storage overview and an auto-delete policy (never / 30 days / 1 year; favorites are always kept).
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## Quick start
 
-When you're ready, run:
+> **Expo Go will not work.** The app uses native modules (`whisper.rn`, `@fugood/react-native-audio-pcm-stream`),
+> so it needs a [development build](https://docs.expo.dev/develop/development-builds/introduction/).
+
+### Requirements
+
+- Node.js 20+ and npm
+- **Android:** Android SDK + NDK (Android Studio is the easiest way), JDK 17+, a device with USB debugging or an emulator
+- **iOS:** a Mac with Xcode
+- About 2 GB of free space on the phone for the app plus a speech model
+
+### Run on a device
 
 ```bash
-npm run reset-project
+git clone https://github.com/hameddrzi/speech_to_text_App.git
+cd speech_to_text_App
+npm install
+
+npx expo run:android      # or: npx expo run:ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+The first build compiles whisper.cpp and takes a few minutes. Afterwards, `npx expo start --dev-client`
+is enough for JavaScript changes.
 
-### Other setup steps
+### First use
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+1. Open **Profile → Transcription → Download Model** (Small, ~190 MB, is the default).
+2. Go to **Record**, pick the language and tap the red button.
+3. Stop. The recording appears in **Archive** and is transcribed in the background.
 
-## Learn more
+### Build a standalone APK (no computer needed to run it)
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+cd android
+./gradlew app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The release APK is about 54 MB and contains the JavaScript bundle, so it runs without Metro.
+It is currently signed with the debug keystore, which is fine for personal installs but
+[not for the Play Store](https://reactnative.dev/docs/signed-apk-android).
 
-## Join the community
+`--no-daemon` makes Gradle exit after the build instead of staying in memory.
 
-Join our community of developers creating universal apps.
+---
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Speech models
+
+All models are multilingual Whisper checkpoints in ggml format, downloaded from
+[huggingface.co/ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp) into the app's
+private storage on first use.
+
+| Model | Download | Speed | Accuracy | Recommended for |
+|---|---|---|---|---|
+| Tiny | 78 MB | fastest | basic | quick tests |
+| Base | 148 MB | fast | fair | clear English speech |
+| **Small** (default) | 190 MB | balanced | moderate | most phones |
+| Turbo (large-v3-turbo, q5) | 574 MB | slower | **best** | Persian and Italian on recent phones |
+
+Larger models are noticeably more accurate, especially for Persian. In practice, Small makes
+frequent mistakes in Persian. See [docs/speech-to-text.md](docs/speech-to-text.md#accuracy) for details.
+
+---
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | How the app is put together: screens, state, storage, data flow |
+| [docs/speech-to-text.md](docs/speech-to-text.md) | The on-device transcription pipeline, models, languages, tuning and troubleshooting |
+| [docs/design-system.md](docs/design-system.md) | Colors, type, spacing and the `<Glass>` material, plus rules for new UI |
+
+---
+
+## Project structure
+
+```
+src/
+├── app/                      # Screens (Expo Router, file-based)
+│   ├── _layout.tsx           # Root: providers, background transcription worker, stack
+│   ├── (tabs)/
+│   │   ├── _layout.tsx       # Record · Archive · Profile with the glass tab bar
+│   │   ├── index.tsx         # Record screen
+│   │   ├── archive.tsx       # Archive list
+│   │   └── profile.tsx       # Profile & settings
+│   └── recording/[id].tsx    # Recording detail (playback + transcript)
+├── components/
+│   ├── glass.tsx             # The shared frosted-glass surface
+│   ├── glass-tab-bar.tsx     # Floating glass tab bar
+│   ├── ambient-background.tsx
+│   ├── record/               # Record button, waveform, live transcript card, language toggle…
+│   ├── archive/              # Rows, search, playback hook, transcript card, scrubber…
+│   └── profile/              # Settings list, option sheets, model download hook…
+├── stt/                      # On-device speech-to-text (Whisper)
+├── hooks/                    # Recording session (native + web variants)
+├── store/                    # Recordings and settings (React context + JSON persistence)
+├── data/                     # Recording types and web preview sample data
+├── constants/theme.ts        # Design tokens
+└── utils/                    # Formatting, JSON storage
+```
+
+---
+
+## Commands
+
+```bash
+npx expo start --dev-client   # start Metro for a development build
+npx expo run:android          # build + install the development build
+npx tsc --noEmit              # type check
+npx expo lint                 # lint
+npx expo install <package>    # add a dependency at the SDK-compatible version
+```
+
+The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo run:*` or
+`npx expo prebuild` recreates them.
+
+---
+
+## Known limitations
+
+- **iOS** has not been built or tested on a device yet.
+- **Persian accuracy** with the default Small model is limited; Turbo is much better. A Persian
+  fine-tuned Whisper model is being evaluated.
+- **Web** is a UI preview: recording is simulated and transcription is unavailable.
+- Some Profile settings are saved but **not applied yet**: *Auto Punctuation*, *Skip Silence*,
+  *Audio Format* and the *Haptics* switch.
+- Speaker labels (who said what) are not supported.
+
+---
+
+## License
+
+No license has been chosen for this project yet. The [LICENSE](LICENSE) file in the repository is
+the MIT license that came with the Expo starter template. Whisper models are released by OpenAI
+under the MIT license.
