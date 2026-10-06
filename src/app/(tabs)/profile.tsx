@@ -18,7 +18,6 @@ import { OptionSheet } from '@/components/profile/option-sheet';
 import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileStats } from '@/components/profile/profile-stats';
 import { ProgressBar } from '@/components/profile/progress-bar';
-import { SegmentedControl } from '@/components/profile/segmented-control';
 import { SEPARATOR_INSET, SettingsRow, SettingsSection } from '@/components/profile/settings-list';
 import { useModelDownload } from '@/components/profile/use-model-download';
 import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
@@ -27,7 +26,6 @@ import { useRecordings } from '@/store/recordings';
 import { BYTES_PER_SECOND } from '@/stt/pcm';
 import {
   AUTO_DELETE_OPTIONS,
-  LANGUAGE_OPTIONS,
   optionLabel,
   SPEECH_MODELS,
   useSettings,
@@ -136,17 +134,6 @@ export default function ProfileScreen() {
         <SettingsSection
           header="Transcription"
           footer="Speech is transcribed on this device with Whisper. Larger models are more accurate but slower and use more storage.">
-          <SettingsRow icon="language" iconColor={Colors.tint} title="Default Language">
-            <View style={styles.inlineControl}>
-              <SegmentedControl
-                accessibilityLabel="Default transcription language"
-                options={LANGUAGE_OPTIONS}
-                value={settings.language}
-                onChange={(v) => set('language', v)}
-              />
-            </View>
-          </SettingsRow>
-
           <SettingsRow
             icon="hardware-chip"
             iconColor="#5E5CE6"
@@ -422,11 +409,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
     marginLeft: Spacing.lg,
     marginBottom: Spacing.sm - 1,
-  },
-  inlineControl: {
-    paddingLeft: SEPARATOR_INSET,
-    paddingRight: Spacing.lg,
-    paddingBottom: Spacing.md,
   },
   inlineProgress: {
     marginLeft: SEPARATOR_INSET,

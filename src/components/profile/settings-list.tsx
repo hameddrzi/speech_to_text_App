@@ -65,8 +65,6 @@ type RowProps = {
   title: string;
   subtitle?: string;
   value?: string;
-  /** Render the value right-to-left (Persian). */
-  valueRtl?: boolean;
   onPress?: () => void;
   /** Right-side custom accessory (switch, badge…). Replaces value + chevron. */
   accessory?: ReactNode;
@@ -84,7 +82,6 @@ export function SettingsRow({
   title,
   subtitle,
   value,
-  valueRtl,
   onPress,
   accessory,
   chevron,
@@ -117,7 +114,7 @@ export function SettingsRow({
         {accessory ?? (
           <View style={styles.trailing}>
             {value ? (
-              <Text style={[styles.value, valueRtl && { writingDirection: 'rtl' }]} numberOfLines={1}>
+              <Text style={styles.value} numberOfLines={1}>
                 {value}
               </Text>
             ) : null}

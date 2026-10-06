@@ -43,7 +43,8 @@ function loadRecordings(policy: AutoDeletePolicy): Recording[] {
   const saved = readJSON<Recording[]>(STORAGE_KEY);
   if (saved) {
     // A transcription that was running when the app closed is picked up again by the worker.
-    const restored = saved.map((r) =>
+    // Older versions also stored a per-recording language; the app is English-only now.
+    const restored = saved.map(({ language: _language, ...r }: Recording & { language?: unknown }) =>
       r.transcriptStatus === 'processing' ? { ...r, transcriptProgress: undefined } : r,
     );
     return pruneExpired(restored, policy);

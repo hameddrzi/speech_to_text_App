@@ -4,7 +4,6 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing } from '@/constants/theme';
-import { isRTL } from '@/utils/format';
 
 type Props = {
   value: string;
@@ -12,9 +11,8 @@ type Props = {
   placeholder?: string;
 };
 
-/** Frosted iOS-style search field. Switches to RTL as soon as the query is Persian. */
+/** Frosted iOS-style search field. */
 export function SearchField({ value, onChangeText, placeholder = 'Search' }: Props) {
-  const rtl = isRTL(value);
   return (
     <Glass radius={Radius.md} elevated={false} intensity={30} style={styles.field}>
       <Ionicons name="search" size={17} color={Colors.labelSecondary} />
@@ -23,7 +21,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search' }: Pro
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={Colors.labelSecondary}
-        style={[styles.input, { textAlign: rtl ? 'right' : 'left', writingDirection: rtl ? 'rtl' : 'ltr' }]}
+        style={styles.input}
         returnKeyType="search"
         autoCorrect={false}
         clearButtonMode="never"

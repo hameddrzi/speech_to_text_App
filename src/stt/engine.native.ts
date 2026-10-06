@@ -2,7 +2,7 @@ import { initWhisper, type TranscribeOptions, type WhisperContext } from 'whispe
 
 import { isModelDownloaded, modelFile } from '@/stt/model-files';
 import { modelInfo, type SpeechModel } from '@/stt/models';
-import type { SttLanguage, SttRequest, SttSegment } from '@/stt/types';
+import type { SttRequest, SttSegment } from '@/stt/types';
 
 /**
  * The single on-device Whisper engine (whisper.cpp via whisper.rn).
@@ -15,12 +15,6 @@ let context: WhisperContext | null = null;
 let contextModel: SpeechModel | null = null;
 let chain: Promise<unknown> = Promise.resolve();
 let busy = false;
-
-/** Short primers that bias Whisper towards the right script and punctuated sentences. */
-const PROMPTS: Partial<Record<SttLanguage, string>> = {
-  fa: 'سلام. این یک یادداشت صوتی به زبان فارسی است.',
-  it: 'Ciao. Questa è una nota vocale in italiano.',
-};
 
 export class ModelMissingError extends Error {
   constructor(model: SpeechModel) {
@@ -42,13 +36,8 @@ async function getContext(model: SpeechModel): Promise<WhisperContext> {
   return context;
 }
 
-function options(language: SttLanguage): TranscribeOptions {
-  return {
-    language,
-    maxLen: 0,
-    ...(PROMPTS[language] ? { prompt: PROMPTS[language] } : null),
-  };
-}
+/** The app transcribes English only. */
+const OPTIONS: TranscribeOptions = { language: 'en', maxLen: 0 };
 
 function exclusive<T>(job: () => Promise<T>): Promise<T> {
   const run = chain.then(async () => {
@@ -80,7 +69,7 @@ export function transcribeFile(uri: string, req: SttRequest): Promise<SttSegment
   return exclusive(async () => {
     const ctx = await getContext(req.model);
     const { promise } = ctx.transcribe(uri, {
-      ...options(req.language),
+      ...OPTIONS,
       onProgress: req.onProgress ? (p) => req.onProgress?.(p / 100) : undefined,
     });
     const result = await promise;
@@ -95,7 +84,7 @@ export function transcribePcmIfIdle(pcm: Uint8Array, req: SttRequest): Promise<s
   return tryExclusive(async () => {
     const ctx = await getContext(req.model);
     const buffer = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer;
-    const { promise } = ctx.transcribeData(buffer, options(req.language));
+    const { promise } = ctx.transcribeData(buffer, OPTIONS);
     const result = await promise;
     return result.result.trim();
   });

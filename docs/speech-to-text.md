@@ -86,7 +86,9 @@ Defined in `models.ts`. All are multilingual ggml checkpoints from
 `q5_0` / `q5_1` are 5-bit quantized versions. They are much smaller than the originals with only a
 small loss in quality.
 
-**Never use the `.en` models** (for example `ggml-base.en.bin`). They only understand English.
+Since the app is English only, the English-only `.en` checkpoints (for example `ggml-base.en.bin`)
+would also work and are slightly more accurate for English at the same size. Switching to them means
+updating `fileName` and the exact `bytes` in `models.ts`.
 
 ### How downloads work (`model-files.ts`)
 
@@ -111,48 +113,24 @@ adb shell rm /data/local/tmp/ggml-small-q5_1.bin
 
 `run-as` only works with debug builds.
 
-## Languages
+## Language
 
-| Code | Language | Notes |
-|---|---|---|
-| `fa` | Persian | Right-to-left display |
-| `en` | English | |
-| `it` | Italian | |
-| `auto` | Automatic | Whisper detects the language (settings only) |
-
-For Persian and Italian a short **prompt** is passed to Whisper (`PROMPTS` in `engine.native.ts`).
-Whisper treats it as text that came "before" the recording, which nudges it toward the right script
-and punctuated sentences instead of transliteration.
-
-### Adding a language
-
-1. Add the code and display name to `RecordingLanguage` and `LANGUAGE_NAMES` in `stt/types.ts`.
-2. Add it to `OPTIONS` in `components/record/language-toggle.tsx` and to `LANGUAGE_OPTIONS` in
-   `store/settings.tsx`.
-3. Optionally add a prompt for it in `PROMPTS` in `stt/engine.native.ts`.
-4. If it is written right to left, check `isRTL` in `utils/format.ts`.
-
-Whisper supports about 100 languages; the code must be one of
-[Whisper's language codes](https://github.com/openai/whisper/blob/main/whisper/tokenizer.py).
+The app is **English only**. Every Whisper call passes `language: 'en'` (`OPTIONS` in
+`engine.native.ts`), for both the live preview and the final transcript. There is no language
+picker and no automatic detection.
 
 ## Accuracy
 
 Accuracy depends mostly on the model size:
 
-- **Small** works for clear English speech, but makes frequent mistakes in Persian.
-- **Turbo** (large-v3-turbo) is clearly better for Persian and Italian and runs well on phones with
-  6 GB+ RAM. It is slower, and the download is 574 MB.
+- **Small** works well for clear speech.
+- **Turbo** (large-v3-turbo) is the most accurate and runs well on phones with 6 GB+ RAM. It is
+  slower, and the download is 574 MB.
 
 Tips that help with any model:
 
-- **Choose the language explicitly** instead of *Auto*. On short clips, automatic detection can
-  pick the wrong language.
 - Hold the phone close and record in a quiet place.
 - Speak in full sentences. Whisper uses the context of the whole sentence.
-
-Planned: a word-error-rate comparison of Small, Turbo and a Persian fine-tuned Turbo
-(`nezamisafa/whisper-v3-turbo-persian-v1.0`, converted to ggml) on the FLEURS Persian and
-Italian test sets.
 
 ## Troubleshooting
 
@@ -163,5 +141,3 @@ Italian test sets.
 | Recording shows **Retry** | Usually it was recorded before a model was installed. Install the model and tap Retry. |
 | Live transcript stays empty | Check that *Live Transcript* is on and a model is downloaded. The first preview appears after about 1.5–3 s while the model loads. |
 | App won't install (`not enough space`) | The phone's storage is full. Free 1–2 GB; models need space too. |
-| Wrong language in the text | Pick the language explicitly before recording instead of *Auto*. |
-| Text is in the wrong script (e.g. Persian in Latin letters) | Make sure `fa` is selected so the Persian prompt is used. |

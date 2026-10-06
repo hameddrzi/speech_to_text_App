@@ -123,7 +123,7 @@ export function useRecordSession() {
         liveRef.current =
           opts.liveTranscript && isModelDownloaded(opts.model)
           ? new LiveTranscriber(
-              { model: opts.model, language: opts.language },
+              { model: opts.model },
               setLiveText,
               (e) => setError(e.message),
             )

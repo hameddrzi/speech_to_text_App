@@ -14,8 +14,7 @@ import { haptic } from '@/components/archive/haptics';
 import { Shimmer } from '@/components/archive/shimmer';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording, type TranscriptSegment } from '@/data/recordings';
-import { LANGUAGE_NAMES } from '@/stt/types';
-import { formatDuration, isRTL } from '@/utils/format';
+import { formatDuration } from '@/utils/format';
 
 type Props = {
   recording: Recording;
@@ -46,7 +45,6 @@ const Segment = memo(function Segment({
   onPress: (start: number) => void;
   onLayoutY: (y: number) => void;
 }) {
-  const rtl = isRTL(segment.text);
   const a = useSharedValue(active ? 1 : 0);
 
   useEffect(() => {
@@ -66,13 +64,12 @@ const Segment = memo(function Segment({
       accessibilityLabel={`${formatDuration(segment.start)}. ${segment.text}`}
       accessibilityHint="Plays from this point">
       <Animated.View style={[styles.segment, bg]}>
-        <Text style={[styles.stamp, { alignSelf: rtl ? 'flex-end' : 'flex-start' }, active && styles.stampActive]}>
+        <Text style={[styles.stamp, active && styles.stampActive]}>
           {formatDuration(segment.start)}
         </Text>
         <Text
           style={[
             styles.segmentText,
-            rtl ? styles.rtl : styles.ltr,
             { color: active ? Colors.label : 'rgba(60,60,67,0.78)' },
           ]}>
           {segment.text}
@@ -82,10 +79,10 @@ const Segment = memo(function Segment({
   );
 });
 
-function SkeletonLines({ rtl }: { rtl: boolean }) {
+function SkeletonLines() {
   const widths = ['100%', '94%', '98%', '86%', '62%'] as const;
   return (
-    <View style={[styles.skeleton, { alignItems: rtl ? 'flex-end' : 'flex-start' }]}>
+    <View style={styles.skeleton}>
       {widths.map((w, i) => (
         <Shimmer key={i} style={[styles.skeletonLine, { width: w }]} />
       ))}
@@ -132,7 +129,7 @@ function Notice({
 
 /** Full-page, time-coded transcript for the recording screen; follows playback and seeks on tap. */
 export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveSegmentChange }: Props) {
-  const { transcript, transcriptStatus, language } = recording;
+  const { transcript, transcriptStatus } = recording;
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const segmentY = useRef<number[]>([]);
@@ -169,9 +166,6 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
         <Text style={styles.heading} accessibilityRole="header">
           Transcript
         </Text>
-        <View style={styles.langChip}>
-          <Text style={styles.langText}>{LANGUAGE_NAMES[language] ?? language}</Text>
-        </View>
         <View style={styles.flex} />
         {done && (
           <Pressable
@@ -218,7 +212,7 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
                 : 'Transcribing on device…'}
             </Text>
           </View>
-          <SkeletonLines rtl={language === 'fa'} />
+          <SkeletonLines />
         </View>
       )}
 
@@ -261,18 +255,6 @@ const styles = StyleSheet.create({
   heading: {
     ...Type.title3,
   },
-  langChip: {
-    paddingHorizontal: Spacing.sm,
-    height: 22,
-    borderRadius: Radius.pill,
-    backgroundColor: 'rgba(118,118,128,0.10)',
-    justifyContent: 'center',
-  },
-  langText: {
-    ...Type.caption,
-    fontSize: 11,
-    fontWeight: '600',
-  },
   flex: { flex: 1 },
   copy: {
     flexDirection: 'row',
@@ -310,14 +292,6 @@ const styles = StyleSheet.create({
     ...Type.body,
     fontSize: 19,
     lineHeight: 32,
-  },
-  rtl: {
-    textAlign: 'right',
-    writingDirection: 'rtl',
-  },
-  ltr: {
-    textAlign: 'left',
-    writingDirection: 'ltr',
   },
   processingRow: {
     flexDirection: 'row',

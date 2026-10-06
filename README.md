@@ -11,7 +11,7 @@ pills and tab bar.
 | | |
 |---|---|
 | **Platforms** | Android (tested on a Galaxy S20 FE), iOS (builds from the same code, not yet tested on device), Web (UI preview only) |
-| **Languages** | Persian (فارسی), English, Italian, or automatic detection |
+| **Language** | English |
 | **Stack** | Expo SDK 57 · React Native 0.86 · Expo Router · TypeScript · Reanimated 4 |
 | **Privacy** | Audio never leaves the device. The only network request is the one-time model download. |
 
@@ -23,7 +23,6 @@ pills and tab bar.
 - One-tap recording with pause, resume, discard and save.
 - Live scrolling waveform and a precise timer (`00:00,00`).
 - **Live transcript** card: text appears while you speak (a rolling Whisper preview, updated about every 1.5 s).
-- Per-take language switch: `فارسی` / `EN` / `IT`.
 
 **Archive**
 - All recordings with search across titles *and* transcript text.
@@ -31,11 +30,10 @@ pills and tab bar.
 - Status chips per recording: *Transcribing n%*, *Text*, *Retry*.
 - Detail screen with a scrubbable waveform, playback speed, ±15 s skip, rename, favorite and delete.
 - Time-coded transcript that highlights and follows the audio as it plays; tap a line to jump there; copy all text.
-- Right-to-left layout for Persian text.
 
 **Profile**
 - Weekly activity stats.
-- Transcription settings: default language, speech model, live transcript on/off.
+- Transcription settings: speech model, live transcript on/off.
 - Model manager: download, switch and delete Whisper models, with progress.
 - Storage overview and an auto-delete policy (never / 30 days / 1 year; favorites are always kept).
 
@@ -69,7 +67,7 @@ is enough for JavaScript changes.
 ### First use
 
 1. Open **Profile → Transcription → Download Model** (Small, ~190 MB, is the default).
-2. Go to **Record**, pick the language and tap the red button.
+2. Go to **Record** and tap the red button.
 3. Stop. The recording appears in **Archive** and is transcribed in the background.
 
 ### Build a standalone APK (no computer needed to run it)
@@ -99,10 +97,10 @@ private storage on first use.
 | Tiny | 78 MB | fastest | basic | quick tests |
 | Base | 148 MB | fast | fair | clear English speech |
 | **Small** (default) | 190 MB | balanced | moderate | most phones |
-| Turbo (large-v3-turbo, q5) | 574 MB | slower | **best** | Persian and Italian on recent phones |
+| Turbo (large-v3-turbo, q5) | 574 MB | slower | **best** | recent phones |
 
-Larger models are noticeably more accurate, especially for Persian. In practice, Small makes
-frequent mistakes in Persian. See [docs/speech-to-text.md](docs/speech-to-text.md#accuracy) for details.
+Larger models are noticeably more accurate. See [docs/speech-to-text.md](docs/speech-to-text.md#accuracy)
+for details.
 
 ---
 
@@ -111,7 +109,7 @@ frequent mistakes in Persian. See [docs/speech-to-text.md](docs/speech-to-text.m
 | Document | What it covers |
 |---|---|
 | [docs/architecture.md](docs/architecture.md) | How the app is put together: screens, state, storage, data flow |
-| [docs/speech-to-text.md](docs/speech-to-text.md) | The on-device transcription pipeline, models, languages, tuning and troubleshooting |
+| [docs/speech-to-text.md](docs/speech-to-text.md) | The on-device transcription pipeline, models, tuning and troubleshooting |
 | [docs/design-system.md](docs/design-system.md) | Colors, type, spacing and the `<Glass>` material, plus rules for new UI |
 
 ---
@@ -132,7 +130,7 @@ src/
 │   ├── glass.tsx             # The shared frosted-glass surface
 │   ├── glass-tab-bar.tsx     # Floating glass tab bar
 │   ├── ambient-background.tsx
-│   ├── record/               # Record button, waveform, live transcript card, language toggle…
+│   ├── record/               # Record button, waveform, live transcript card…
 │   ├── archive/              # Rows, search, playback hook, transcript card, scrubber…
 │   └── profile/              # Settings list, option sheets, model download hook…
 ├── stt/                      # On-device speech-to-text (Whisper)
@@ -163,8 +161,7 @@ The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo ru
 ## Known limitations
 
 - **iOS** has not been built or tested on a device yet.
-- **Persian accuracy** with the default Small model is limited; Turbo is much better. A Persian
-  fine-tuned Whisper model is being evaluated.
+- **English only.** Transcription always runs with Whisper's language set to English.
 - **Web** is a UI preview: recording is simulated and transcription is unavailable.
 - Some Profile settings are saved but **not applied yet**: *Auto Punctuation*, *Skip Silence*,
   *Audio Format* and the *Haptics* switch.

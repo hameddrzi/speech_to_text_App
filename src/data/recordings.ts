@@ -1,5 +1,3 @@
-import type { RecordingLanguage } from '@/stt/types';
-
 export type TranscriptSegment = {
   /** Seconds from the start of the recording. */
   start: number;
@@ -22,7 +20,6 @@ export type Recording = {
   waveform: number[];
   transcript: TranscriptSegment[];
   transcriptStatus: TranscriptStatus;
-  language: RecordingLanguage;
   favorite: boolean;
   /** 0–1 while the on-device transcription is running. */
   transcriptProgress?: number;
@@ -53,20 +50,19 @@ const daysAgo = (d: number, h = 10, m = 0) => {
 export const MOCK_RECORDINGS: Recording[] = [
   {
     id: 'r1',
-    title: 'جلسه تیم محصول',
+    title: 'Product team meeting',
     createdAt: daysAgo(0, 9, 42),
     duration: 184,
     uri: null,
     waveform: makeWaveform(3),
-    language: 'fa',
     favorite: true,
     transcriptStatus: 'done',
     transcript: [
-      { start: 0, end: 12, text: 'سلام به همه، امروز میخوایم درباره نسخه جدید اپ صحبت کنیم.' },
-      { start: 12, end: 31, text: 'اولویت اول ما اینه که بخش ضبط صدا کاملاً پایدار باشه و هیچ صدایی از دست نره.' },
-      { start: 31, end: 58, text: 'بعد از اون، متن پیاده‌شده باید داخل آرشیو کنار هر فایل صوتی نمایش داده بشه.' },
-      { start: 58, end: 90, text: 'طراحی باید سفید و تمیز باشه، با المان‌های شیشه‌ای، شبیه اپ Voice Memos آیفون.' },
-      { start: 90, end: 184, text: 'تا آخر هفته نمونه اولیه رو آماده می‌کنیم و بعد هسته تبدیل گفتار به متن رو وصل می‌کنیم.' },
+      { start: 0, end: 12, text: 'Hi everyone, today we want to talk about the new version of the app.' },
+      { start: 12, end: 31, text: 'Our first priority is making recording rock solid, so no audio is ever lost.' },
+      { start: 31, end: 58, text: 'After that, the transcript should show up in the archive next to each audio file.' },
+      { start: 58, end: 90, text: 'The design should be white and clean, with glass elements, like Voice Memos on the iPhone.' },
+      { start: 90, end: 184, text: 'We will have a prototype ready by the end of the week, then wire up the speech-to-text core.' },
     ],
   },
   {
@@ -76,7 +72,6 @@ export const MOCK_RECORDINGS: Recording[] = [
     duration: 47,
     uri: null,
     waveform: makeWaveform(11),
-    language: 'en',
     favorite: false,
     transcriptStatus: 'done',
     transcript: [
@@ -86,12 +81,11 @@ export const MOCK_RECORDINGS: Recording[] = [
   },
   {
     id: 'r3',
-    title: 'یادداشت صوتی',
+    title: 'Voice note',
     createdAt: daysAgo(1, 21, 17),
     duration: 312,
     uri: null,
     waveform: makeWaveform(23),
-    language: 'fa',
     favorite: false,
     transcriptStatus: 'processing',
     transcript: [],
@@ -103,7 +97,6 @@ export const MOCK_RECORDINGS: Recording[] = [
     duration: 2715,
     uri: null,
     waveform: makeWaveform(37),
-    language: 'en',
     favorite: true,
     transcriptStatus: 'done',
     transcript: [
@@ -114,12 +107,11 @@ export const MOCK_RECORDINGS: Recording[] = [
   },
   {
     id: 'r5',
-    title: 'تماس با پشتیبانی',
+    title: 'Support call',
     createdAt: daysAgo(8, 16, 30),
     duration: 96,
     uri: null,
     waveform: makeWaveform(51),
-    language: 'fa',
     favorite: false,
     transcriptStatus: 'failed',
     transcript: [],

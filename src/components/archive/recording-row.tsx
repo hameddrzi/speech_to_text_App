@@ -16,7 +16,7 @@ import { StatusChip } from '@/components/archive/status-chip';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
-import { formatDuration, formatRecordingDate, isRTL } from '@/utils/format';
+import { formatDuration, formatRecordingDate } from '@/utils/format';
 
 export const ROW_LAYOUT = LinearTransition.springify().damping(22).stiffness(220).mass(0.9);
 
@@ -79,9 +79,7 @@ export const RecordingRow = memo(function RecordingRow({
   onSwipeOpen,
 }: RecordingRowProps) {
   const swipeRef = useRef<SwipeableMethods>(null);
-  const titleRTL = isRTL(recording.title);
   const preview = transcriptText(recording);
-  const previewRTL = isRTL(preview);
   const id = recording.id;
 
   const handleDelete = async () => {
@@ -150,10 +148,7 @@ export const RecordingRow = memo(function RecordingRow({
             <View style={styles.titleRow}>
               <Text
                 numberOfLines={1}
-                style={[
-                  styles.title,
-                  { textAlign: titleRTL ? 'right' : 'left', writingDirection: titleRTL ? 'rtl' : 'ltr' },
-                ]}>
+                style={styles.title}>
                 {recording.title}
               </Text>
               {recording.favorite && <Ionicons name="star" size={13} color={Colors.warning} />}
@@ -168,10 +163,7 @@ export const RecordingRow = memo(function RecordingRow({
             {preview.length > 0 ? (
               <Text
                 numberOfLines={2}
-                style={[
-                  styles.preview,
-                  { textAlign: previewRTL ? 'right' : 'left', writingDirection: previewRTL ? 'rtl' : 'ltr' },
-                ]}>
+                style={styles.preview}>
                 {preview}
               </Text>
             ) : (

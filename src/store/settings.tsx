@@ -1,7 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { formatBytes, MODELS, type SpeechModel } from '@/stt/models';
-import type { SttLanguage } from '@/stt/types';
 import { readJSON, writeJSON } from '@/utils/storage';
 
 export type { SpeechModel };
@@ -11,13 +10,10 @@ export type { SpeechModel };
  * The recorder and the on-device speech-to-text engine read it via useSettings().
  */
 
-export type TranscriptionLanguage = SttLanguage;
 export type AudioQuality = 'standard' | 'high' | 'lossless';
 export type AutoDeletePolicy = 'never' | '30d' | '1y';
 
 export type AppSettings = {
-  /** Language passed to the on-device Whisper model; 'auto' lets the model detect it. */
-  language: TranscriptionLanguage;
   /** Which Whisper checkpoint to load on device. */
   speechModel: SpeechModel;
   /** Stream partial transcript while recording. */
@@ -35,7 +31,6 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  language: 'auto',
   speechModel: 'small',
   liveTranscript: true,
   autoPunctuation: true,
@@ -45,14 +40,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoDelete: 'never',
 };
 
-export type Option<T extends string> = { value: T; label: string; detail?: string; rtl?: boolean };
-
-export const LANGUAGE_OPTIONS: Option<TranscriptionLanguage>[] = [
-  { value: 'fa', label: 'فارسی', rtl: true },
-  { value: 'en', label: 'English' },
-  { value: 'it', label: 'Italiano' },
-  { value: 'auto', label: 'Auto' },
-];
+export type Option<T extends string> = { value: T; label: string; detail?: string };
 
 /** Whisper checkpoints offered in the UI, sized from the real model files. */
 export const SPEECH_MODELS: (Option<SpeechModel> & { sizeMB: number; hint: string })[] = MODELS.map((m) => ({
@@ -91,10 +79,11 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 const STORAGE_KEY = 'settings';
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<AppSettings>(() => ({
-    ...DEFAULT_SETTINGS,
-    ...readJSON<Partial<AppSettings>>(STORAGE_KEY),
-  }));
+  const [settings, setSettings] = useState<AppSettings>(() => {
+    // Older versions also stored a transcription language; the app is English-only now.
+    const { language: _language, ...saved } = readJSON<Partial<AppSettings> & { language?: unknown }>(STORAGE_KEY) ?? {};
+    return { ...DEFAULT_SETTINGS, ...saved };
+  });
 
   useEffect(() => {
     writeJSON(STORAGE_KEY, settings);

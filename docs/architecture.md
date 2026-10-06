@@ -70,7 +70,6 @@ type Recording = {
   waveform: number[];            // 0–1 amplitudes for drawing
   transcript: TranscriptSegment[]; // { start, end, text } in seconds
   transcriptStatus: 'none' | 'processing' | 'done' | 'failed';
-  language: 'fa' | 'en' | 'it';
   favorite: boolean;
   transcriptProgress?: number;   // 0–1 while transcribing
   transcriptError?: string;      // shown with the Retry button
@@ -93,7 +92,6 @@ and `toggleFavorite`. Every change is written back to disk right away.
 
 | Setting | Default | Used by |
 |---|---|---|
-| `language` | `auto` | Initial language on the Record screen |
 | `speechModel` | `small` | Live preview and the background worker |
 | `liveTranscript` | `true` | Record screen (turns the rolling preview on or off) |
 | `autoDelete` | `never` | Recordings store, applied once per app launch |

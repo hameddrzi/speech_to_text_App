@@ -21,7 +21,7 @@ export function TranscriptionWorker() {
 
   useEffect(() => {
     if (!next || activeId.current) return;
-    const { id, uri, language } = next;
+    const { id, uri } = next;
 
     if (!STT_SUPPORTED || !uri) {
       updateRecording(id, {
@@ -39,7 +39,6 @@ export function TranscriptionWorker() {
 
     transcribeFile(uri, {
       model: settings.speechModel,
-      language,
       onProgress: (p) => {
         if (p - lastReported < 0.05 && p < 1) return;
         lastReported = p;

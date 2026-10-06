@@ -28,8 +28,3 @@ export function formatRecordingDate(iso: string): string {
   if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'long' });
   return d.toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
 }
-
-/** True when the string is mostly right-to-left script (Persian/Arabic). */
-export function isRTL(text: string): boolean {
-  return /[؀-ۿ]/.test(text);
-}
