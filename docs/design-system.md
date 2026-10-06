@@ -105,18 +105,10 @@ Shadow    soft (cards) · lifted (floating controls)
 
 ## Motion and feedback
 
-- Animations use **Reanimated springs**: the language toggle's sliding white lens, the record
-  button's morph, the waveform.
+- Animations use **Reanimated springs**: the record button's morph, the waveform.
 - Selections and key actions trigger a light **haptic** tap (`expo-haptics`).
 - The app's **React Compiler** is on, so components are memoized automatically; avoid hand-written
   `useMemo` / `useCallback` unless profiling shows a need.
-
-## Right-to-left text
-
-Persian text is detected per string with `isRTL()` (`src/utils/format.ts`) and rendered with
-`writingDirection: 'rtl'` and right alignment. The app layout itself stays left-to-right, as in
-iOS when a single note is in Persian. Mixed lists (Persian and English recordings) align each row
-on its own.
 
 ## Rules for new UI
 
@@ -126,4 +118,4 @@ on its own.
 3. **Keep the background white.** Color comes from the accent tokens and the ambient blobs only.
 4. **Red is reserved for recording and deleting.**
 5. **Test on Android as well as iOS.** Glass looks different on each.
-6. **Set accessibility labels and roles** on every custom control (see `language-toggle.tsx`).
+6. **Set accessibility labels and roles** on every custom control (see `record-button.tsx`).

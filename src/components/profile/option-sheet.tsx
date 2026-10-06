@@ -59,7 +59,7 @@ export function OptionSheet<T extends string>({ visible, title, message, options
                       }}
                       style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}>
                       <View style={styles.optionText}>
-                        <Text style={[styles.optionLabel, o.rtl && styles.rtl]}>{o.label}</Text>
+                        <Text style={styles.optionLabel}>{o.label}</Text>
                         {o.detail ? <Text style={styles.optionDetail}>{o.detail}</Text> : null}
                       </View>
                       {selected && <Ionicons name="checkmark" size={20} color={Colors.tint} />}
@@ -150,8 +150,5 @@ const styles = StyleSheet.create({
   optionDetail: {
     ...Type.footnote,
     marginTop: 2,
-  },
-  rtl: {
-    writingDirection: 'rtl',
   },
 });

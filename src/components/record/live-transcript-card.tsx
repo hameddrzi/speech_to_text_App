@@ -13,7 +13,6 @@ import Animated, {
 
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
-import { isRTL } from '@/utils/format';
 
 type Props = {
   /** Live speech-to-text output so far. Empty string → placeholder. */
@@ -28,12 +27,11 @@ type Props = {
 
 /**
  * Frosted card where live speech-to-text will stream.
- * The STT core only needs to feed `text` (and `active`); the card handles RTL, scrolling and empty states.
+ * The STT core only needs to feed `text` (and `active`); the card handles scrolling and empty states.
  */
 export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const hasText = text.trim().length > 0;
-  const rtl = hasText && isRTL(text);
 
   return (
     <Glass radius={Radius.lg} intensity={45} style={styles.card}>
@@ -57,7 +55,7 @@ export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
         {hasText ? (
           <Text
-            style={[styles.body, rtl && styles.bodyRtl]}
+            style={styles.body}
             accessibilityLiveRegion="polite">
             {text}
           </Text>
@@ -152,10 +150,6 @@ const styles = StyleSheet.create({
   body: {
     ...Type.callout,
     lineHeight: 22,
-  },
-  bodyRtl: {
-    textAlign: 'right',
-    writingDirection: 'rtl',
   },
   placeholder: {
     ...Type.footnote,

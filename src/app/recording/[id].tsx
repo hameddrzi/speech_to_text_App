@@ -23,7 +23,7 @@ import { Glass } from '@/components/glass';
 import { Colors, Radius, ScreenPadding, Shadow, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
-import { formatDuration, formatRecordingDate, isRTL } from '@/utils/format';
+import { formatDuration, formatRecordingDate } from '@/utils/format';
 
 const HEADER_HEIGHT = 56;
 
@@ -58,12 +58,10 @@ function NotFound() {
   );
 }
 
-/** Tap-to-rename large title (RTL aware). Commits on submit / blur. */
+/** Tap-to-rename large title. Commits on submit / blur. */
 function EditableTitle({ title, onRename }: { title: string; onRename: (title: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(title);
-  const rtl = isRTL(editing ? draft : title);
-  const dir = { textAlign: rtl ? 'right' : 'left', writingDirection: rtl ? 'rtl' : 'ltr' } as const;
 
   const commit = () => {
     const next = draft.trim();
@@ -87,7 +85,7 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
         onBlur={commit}
         returnKeyType="done"
         maxLength={80}
-        style={[styles.title, styles.titleInput, dir]}
+        style={[styles.title, styles.titleInput]}
         accessibilityLabel="Recording title"
       />
     );
@@ -103,8 +101,8 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
       accessibilityRole="button"
       accessibilityLabel={`${title}. Rename`}
       accessibilityHint="Double tap to edit the title"
-      style={[styles.titleRow, rtl && styles.titleRowRTL]}>
-      <Text style={[styles.title, dir, styles.flexShrink]}>{title}</Text>
+      style={styles.titleRow}>
+      <Text style={[styles.title, styles.flexShrink]}>{title}</Text>
       <Ionicons name="pencil" size={15} color={Colors.labelTertiary} style={styles.pencil} />
     </Pressable>
   );
@@ -360,9 +358,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     marginTop: Spacing.md,
-  },
-  titleRowRTL: {
-    flexDirection: 'row-reverse',
   },
   flexShrink: {
     flexShrink: 1,

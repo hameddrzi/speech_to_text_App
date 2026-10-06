@@ -1,6 +1,6 @@
 /**
  * On-device Whisper checkpoints (multilingual ggml files from the whisper.cpp model repo).
- * All of them understand Persian; bigger ones are noticeably more accurate for it.
+ * Bigger ones are noticeably more accurate.
  */
 
 export type SpeechModel = 'tiny' | 'base' | 'small' | 'turbo';
@@ -24,7 +24,7 @@ export const MODELS: ModelInfo[] = [
     label: 'Small',
     fileName: 'ggml-small-q5_1.bin',
     bytes: 190_085_487,
-    hint: 'Balanced · recommended for Persian',
+    hint: 'Balanced · recommended',
   },
   {
     value: 'turbo',

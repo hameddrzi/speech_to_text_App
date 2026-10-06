@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmbientBackground } from '@/components/ambient-background';
 import { Glass } from '@/components/glass';
 import { ControlButton } from '@/components/record/control-button';
-import { LanguageToggle, type TranscriptLanguage } from '@/components/record/language-toggle';
 import { LiveTranscriptCard } from '@/components/record/live-transcript-card';
 import { LiveWaveform } from '@/components/record/live-waveform';
 import { PermissionCard } from '@/components/record/permission-card';
@@ -52,9 +51,6 @@ export default function RecordScreen() {
   const { phase, elapsedMs, samples, permission } = session;
 
   const { settings } = useSettings();
-  const [language, setLanguage] = useState<TranscriptLanguage>(
-    settings.language === 'auto' ? 'fa' : settings.language,
-  );
   const takeIdRef = useRef<string | null>(null);
   const [toast, setToast] = useState<{ id: string; title: string } | null>(null);
 
@@ -88,13 +84,12 @@ export default function RecordScreen() {
       transcript: [],
       // The background TranscriptionWorker picks this up and runs the accurate on-device pass.
       transcriptStatus: result.uri ? 'processing' : 'none',
-      language,
       favorite: false,
     };
     addRecording(rec);
     setToast({ id: rec.id, title: rec.title });
     if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-  }, [session, nextTitle, language, addRecording]);
+  }, [session, nextTitle, addRecording]);
 
   const onRecordPress = useCallback(async () => {
     if (phase === 'idle') {
@@ -103,14 +98,13 @@ export default function RecordScreen() {
       takeIdRef.current = `rec-${Date.now()}`;
       await session.start({
         id: takeIdRef.current,
-        language,
         model: settings.speechModel,
         liveTranscript: settings.liveTranscript,
       });
     } else if (isActive) {
       await save();
     }
-  }, [phase, isActive, session, save, language, settings.speechModel, settings.liveTranscript]);
+  }, [phase, isActive, session, save, settings.speechModel, settings.liveTranscript]);
 
   const onPauseResume = useCallback(() => {
     if (!isWeb) Haptics.selectionAsync();
@@ -160,7 +154,6 @@ export default function RecordScreen() {
               {isActive ? nextTitle : today}
             </Text>
           </View>
-          <LanguageToggle value={language} onChange={setLanguage} disabled={isActive || busy} />
         </View>
 
         {/* Stage: timer + live waveform */}

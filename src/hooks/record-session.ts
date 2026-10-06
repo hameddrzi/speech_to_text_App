@@ -10,7 +10,6 @@ import { Linking, Platform } from 'react-native';
 
 import { dbToLevel, simulatedLevel, smoothLevel } from '@/components/record/waveform-utils';
 import type { SpeechModel } from '@/stt/models';
-import type { SttLanguage } from '@/stt/types';
 
 export type RecordPhase = 'idle' | 'starting' | 'recording' | 'paused' | 'saving';
 export type MicPermission = 'undetermined' | 'granted' | 'denied' | 'blocked';
@@ -20,7 +19,6 @@ export type WaveSample = { id: number; v: number };
 export type StartOptions = {
   /** Recording id; the native recorder names its WAV file after it. */
   id: string;
-  language: SttLanguage;
   model: SpeechModel;
   /** Run the rolling on-device Whisper preview while recording (native only). */
   liveTranscript: boolean;
