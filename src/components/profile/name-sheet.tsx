@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import Animated, { FadeIn, SlideInDown } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
+import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
@@ -17,8 +16,13 @@ const MAX_LENGTH = 40;
 
 /** Frosted bottom sheet with a single text field for the name shown on the Profile tab. */
 export function NameSheet({ visible, name, onSave, onClose }: Props) {
-  const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState(name);
+  // Start from the saved name each time the sheet opens (state adjustment during render).
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
+    if (visible) setDraft(name);
+  }
 
   const save = () => {
     onSave(draft.trim());
@@ -26,69 +30,42 @@ export function NameSheet({ visible, name, onSave, onClose }: Props) {
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      statusBarTranslucent
-      navigationBarTranslucent
-      onShow={() => setDraft(name)}
-      onRequestClose={onClose}>
-      <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel">
-          <Animated.View entering={FadeIn.duration(200)} style={[StyleSheet.absoluteFill, styles.backdrop]} />
-        </Pressable>
+    <BottomSheet visible={visible} onClose={onClose} closeLabel="Cancel">
+      <Glass strong intensity={80} radius={Radius.xl} style={styles.sheet}>
+        <View style={styles.grabber} />
+        <View style={styles.headerRow}>
+          <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
+            <Text style={styles.cancel}>Cancel</Text>
+          </Pressable>
+          <Text style={styles.title} accessibilityRole="header">
+            Your Name
+          </Text>
+          <Pressable onPress={save} hitSlop={10} accessibilityRole="button" accessibilityLabel="Save name">
+            <Text style={styles.save}>Save</Text>
+          </Pressable>
+        </View>
 
-        <Animated.View
-          entering={SlideInDown.springify().damping(22).stiffness(220)}
-          style={[styles.sheetWrap, { paddingBottom: Math.max(insets.bottom, Spacing.lg) }]}>
-          <Glass strong intensity={80} radius={Radius.xl} style={styles.sheet}>
-            <View style={styles.grabber} />
-            <View style={styles.headerRow}>
-              <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
-                <Text style={styles.cancel}>Cancel</Text>
-              </Pressable>
-              <Text style={styles.title} accessibilityRole="header">
-                Your Name
-              </Text>
-              <Pressable onPress={save} hitSlop={10} accessibilityRole="button" accessibilityLabel="Save name">
-                <Text style={styles.save}>Save</Text>
-              </Pressable>
-            </View>
-
-            <TextInput
-              value={draft}
-              onChangeText={setDraft}
-              placeholder="Name"
-              placeholderTextColor={Colors.labelTertiary}
-              autoFocus
-              autoCapitalize="words"
-              autoCorrect={false}
-              maxLength={MAX_LENGTH}
-              returnKeyType="done"
-              onSubmitEditing={save}
-              style={styles.input}
-              accessibilityLabel="Your name"
-            />
-            <Text style={styles.footnote}>Only used on this screen. It stays on your phone.</Text>
-          </Glass>
-        </Animated.View>
-      </KeyboardAvoidingView>
-    </Modal>
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Name"
+          placeholderTextColor={Colors.labelTertiary}
+          autoFocus
+          autoCapitalize="words"
+          autoCorrect={false}
+          maxLength={MAX_LENGTH}
+          returnKeyType="done"
+          onSubmitEditing={save}
+          style={styles.input}
+          accessibilityLabel="Your name"
+        />
+        <Text style={styles.footnote}>Only used on this screen. It stays on your phone.</Text>
+      </Glass>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    justifyContent: 'flex-end',
-  },
-  backdrop: {
-    backgroundColor: 'rgba(15,23,42,0.18)',
-  },
-  sheetWrap: {
-    paddingHorizontal: Spacing.sm,
-  },
   sheet: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: Spacing.lg,

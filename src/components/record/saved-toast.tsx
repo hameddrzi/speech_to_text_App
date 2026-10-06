@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeOutUp, SlideInUp } from 'react-native-reanimated';
+import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Shadow, Spacing, Type } from '@/constants/theme';
@@ -15,19 +15,42 @@ type Props = {
   top: number;
 };
 
-/** Floating glass confirmation shown after a take is saved, with a "View" shortcut to the archive. */
-export function SavedToast({ title, onView, onDismiss, duration = 4000, top }: Props) {
+const SHOW = { duration: 220, easing: Easing.out(Easing.cubic) };
+const HIDE = { duration: 180, easing: Easing.in(Easing.cubic) };
+
+/**
+ * Floating glass confirmation shown after a take is saved, with a "View" shortcut to the archive.
+ * It fades in with a short slide from just above its spot, and fades out the same way before unmounting.
+ */
+export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: Props) {
+  const shown = useSharedValue(0);
+
   useEffect(() => {
-    const id = setTimeout(onDismiss, duration);
+    shown.set(withTiming(1, SHOW));
+  }, [shown]);
+
+  const hide = (then: () => void) => {
+    shown.set(
+      withTiming(0, HIDE, (finished) => {
+        if (finished) runOnJS(then)();
+      }),
+    );
+  };
+
+  useEffect(() => {
+    const id = setTimeout(() => hide(onDismiss), duration);
     return () => clearTimeout(id);
+    // hide() only touches the shared value; re-arming the timer on every render would restart it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [onDismiss, duration]);
 
+  const style = useAnimatedStyle(() => ({
+    opacity: shown.get(),
+    transform: [{ translateY: (1 - shown.get()) * -12 }],
+  }));
+
   return (
-    <Animated.View
-      entering={SlideInUp.springify().damping(18).stiffness(180)}
-      exiting={FadeOutUp.duration(220)}
-      style={[styles.wrap, { top }]}
-      pointerEvents="box-none">
+    <Animated.View style={[styles.wrap, { top }, style]} pointerEvents="box-none">
       <Glass radius={Radius.xl} intensity={70} strong style={styles.toast} accessibilityLiveRegion="polite">
         <View style={styles.check}>
           <Ionicons name="checkmark" size={16} color="#FFFFFF" />

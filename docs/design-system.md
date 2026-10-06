@@ -52,7 +52,8 @@ both platforms.
 
 Glass needs something behind it to look like glass. Each tab places three large, very soft pastel
 blobs (`blobA` peach, `blobB` sky blue, `blobC` lavender) in a different arrangement per screen.
-They are subtle enough that the screen still reads as white.
+They are subtle enough that the screen still reads as white. Each blob is an SVG radial gradient that
+fades to fully transparent, so it has no edge on any platform (Android has no reliable blur view).
 
 ## Color
 
@@ -105,7 +106,14 @@ Shadow    soft (cards) · lifted (floating controls)
 
 ## Motion and feedback
 
-- Animations use **Reanimated springs**: the record button's morph, the waveform.
+- Small controls (record button morph, switches, tab lens) use **Reanimated springs**.
+- Anything that appears over the screen (sheets, toasts) uses a short **timing** curve, never a spring:
+  ease-out in (~250 ms), ease-in out (~200 ms). Sheets go through `<BottomSheet>`
+  (`src/components/bottom-sheet.tsx`), which slides out before unmounting its Modal.
+- **Never build animated colors or sizes with template strings** (`` `rgba(0,0,0,${v})` ``). A settling
+  animation reaches values like `1e-8`, and Android crashes on the resulting `rgba(0,0,0,1e-8)`.
+  Use `interpolateColor`, or format numbers with `toFixed`.
+- Prefer animating `transform` and `opacity` over `width`/`height`, so animations don't trigger layout.
 - Selections and key actions trigger a light **haptic** tap. Always go through `haptic` in
   `src/utils/haptics.ts` (never `expo-haptics` directly), so the Haptics switch in Profile is respected.
 - The app's **React Compiler** is on, so components are memoized automatically; avoid hand-written

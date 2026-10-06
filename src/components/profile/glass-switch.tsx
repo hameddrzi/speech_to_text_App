@@ -1,7 +1,6 @@
 import { useEffect } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, {
-  interpolate,
   interpolateColor,
   useAnimatedStyle,
   useSharedValue,
@@ -42,12 +41,14 @@ export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled
     backgroundColor: interpolateColor(progress.value, [0, 1], ['rgba(120,120,128,0.16)', Colors.success]),
   }));
 
+  // Only transforms are animated (no width), so the switch never triggers a layout pass while it moves.
   const knobStyle = useAnimatedStyle(() => {
+    const p = Math.min(1, Math.max(0, progress.value));
     const stretch = pressed.value * STRETCH;
     const travel = TRACK_W - PAD * 2 - KNOB;
-    // When on and stretched, grow toward the left so the knob stays pinned to the right edge.
-    const x = interpolate(progress.value, [0, 1], [0, travel - stretch]);
-    return { width: KNOB + stretch, transform: [{ translateX: x }] };
+    // Stretch from the left edge when off and from the right edge when on, like UIKit.
+    const x = p * travel + (stretch / 2) * (1 - 2 * p);
+    return { transform: [{ translateX: x }, { scaleX: (KNOB + stretch) / KNOB }] };
   });
 
   return (
@@ -81,6 +82,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   knob: {
+    width: KNOB,
     height: KNOB,
     borderRadius: KNOB / 2,
     backgroundColor: '#FFFFFF',
