@@ -2,7 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
 
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { SKIP_SECONDS, type PlaybackRate } from '@/components/archive/use-playback';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';

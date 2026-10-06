@@ -1,4 +1,3 @@
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -9,6 +8,7 @@ import { Glass } from '@/components/glass';
 import { ControlButton } from '@/components/record/control-button';
 import { LiveTranscriptCard } from '@/components/record/live-transcript-card';
 import { LiveWaveform } from '@/components/record/live-waveform';
+import { ModelPill } from '@/components/record/model-pill';
 import { PermissionCard } from '@/components/record/permission-card';
 import { RecordButton } from '@/components/record/record-button';
 import { RecordStatus } from '@/components/record/record-status';
@@ -27,8 +27,10 @@ import type { Recording } from '@/data/recordings';
 import { RECORD_TICK_MS, useRecordSession } from '@/hooks/record-session';
 import { useRecordings } from '@/store/recordings';
 import { useSettings } from '@/store/settings';
-import { isModelDownloaded, STT_SUPPORTED } from '@/stt/model-files';
+import { STT_SUPPORTED } from '@/stt/model-files';
+import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatTimer } from '@/utils/format';
+import { haptic } from '@/utils/haptics';
 
 const isWeb = Platform.OS === 'web';
 
@@ -51,6 +53,7 @@ export default function RecordScreen() {
   const { phase, elapsedMs, samples, permission } = session;
 
   const { settings } = useSettings();
+  const modelReady = useSelectedModelReady();
   const takeIdRef = useRef<string | null>(null);
   const [toast, setToast] = useState<{ id: string; title: string } | null>(null);
 
@@ -58,7 +61,7 @@ export default function RecordScreen() {
   const liveTranscript = session.liveText;
   const transcriptHint = !STT_SUPPORTED
     ? 'Live transcription runs in the phone app.'
-    : !isModelDownloaded(settings.speechModel)
+    : !modelReady
       ? 'Download a speech model in Profile to see your words here while you record.'
       : !settings.liveTranscript
         ? 'Live transcript is off. Your recording is transcribed after you stop.'
@@ -88,13 +91,13 @@ export default function RecordScreen() {
     };
     addRecording(rec);
     setToast({ id: rec.id, title: rec.title });
-    if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    haptic.success();
   }, [session, nextTitle, addRecording]);
 
   const onRecordPress = useCallback(async () => {
     if (phase === 'idle') {
       setToast(null);
-      if (!isWeb) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      haptic.medium();
       takeIdRef.current = `rec-${Date.now()}`;
       await session.start({
         id: takeIdRef.current,
@@ -107,14 +110,14 @@ export default function RecordScreen() {
   }, [phase, isActive, session, save, settings.speechModel, settings.liveTranscript]);
 
   const onPauseResume = useCallback(() => {
-    if (!isWeb) Haptics.selectionAsync();
+    haptic.selection();
     if (phase === 'recording') session.pause();
     else if (phase === 'paused') session.resume();
   }, [phase, session]);
 
   const onDiscard = useCallback(() => {
     const doDiscard = () => {
-      if (!isWeb) Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      haptic.warning();
       session.discard();
     };
     if (isWeb) {
@@ -154,6 +157,7 @@ export default function RecordScreen() {
               {isActive ? nextTitle : today}
             </Text>
           </View>
+          <ModelPill disabled={isActive || busy} />
         </View>
 
         {/* Stage: timer + live waveform */}

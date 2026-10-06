@@ -21,6 +21,11 @@ export type { FinishedRecording, MicPermission, RecordPhase, StartOptions, WaveS
 /** Sampling interval for timer + waveform. One bar is appended per tick. */
 export const RECORD_TICK_MS = 60;
 const MAX_VISIBLE_SAMPLES = 180;
+/**
+ * On Android, stop() only flags the native read loop; the recorder is released a moment later on its own
+ * thread. A new init() inside that window would have its recorder nulled out, so wait it out before reusing.
+ */
+const NATIVE_RELEASE_MS = 250;
 
 /**
  * Native recording session: raw 16 kHz mono PCM from the microphone feeds three things at once —
@@ -86,6 +91,7 @@ export function useRecordSession() {
     try {
       await LiveAudioStream.stop();
     } catch {}
+    await new Promise((resolve) => setTimeout(resolve, NATIVE_RELEASE_MS));
   }, []);
 
   // Never leave the microphone open if the screen unmounts mid-take.
@@ -165,21 +171,22 @@ export function useRecordSession() {
     [phase, resetSession],
   );
 
+  // Pausing keeps the native stream open and just drops its chunks: on Android, stop() releases the
+  // recorder, so a later start() would silently capture nothing.
   const pause = useCallback(() => {
     if (phase !== 'recording') return;
-    stopStream();
+    capturingRef.current = false;
     liveRef.current?.pause();
     accumulatedRef.current = currentElapsed();
     segmentStartRef.current = null;
     latestLevelRef.current = 0;
     setElapsedMs(accumulatedRef.current);
     setPhase('paused');
-  }, [phase, currentElapsed, stopStream]);
+  }, [phase, currentElapsed]);
 
   const resume = useCallback(() => {
     if (phase !== 'paused') return;
     capturingRef.current = true;
-    LiveAudioStream.start();
     liveRef.current?.start();
     segmentStartRef.current = Date.now();
     setPhase('recording');

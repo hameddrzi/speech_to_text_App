@@ -7,18 +7,32 @@ import type { TranscriptStatus } from '@/data/recordings';
 
 type Props = {
   status: TranscriptStatus;
+  /** A 'processing' recording that can't start because no speech model is downloaded. */
+  waitingForModel?: boolean;
   onRetry?: () => void;
 };
 
-/** Tiny transcript-state chip: done ✓, processing (shimmering), failed (tap to retry). Renders nothing for 'none'. */
-export function StatusChip({ status, onRetry }: Props) {
+/**
+ * Tiny transcript-state chip: done ✓, processing (shimmering), waiting for a model, failed (tap to retry).
+ * Renders nothing for 'none'.
+ */
+export function StatusChip({ status, waitingForModel, onRetry }: Props) {
   if (status === 'none') return null;
 
   if (status === 'done') {
     return (
-      <View style={[styles.chip, { backgroundColor: 'rgba(52,199,89,0.12)' }]} accessibilityLabel="Transcribed">
+      <View style={[styles.chip, { backgroundColor: Colors.successSoft }]} accessibilityLabel="Transcribed">
         <Ionicons name="checkmark-circle" size={12} color={Colors.success} />
-        <Text style={[styles.text, { color: '#1F8A3B' }]}>Text</Text>
+        <Text style={[styles.text, { color: Colors.successText }]}>Transcript</Text>
+      </View>
+    );
+  }
+
+  if (status === 'processing' && waitingForModel) {
+    return (
+      <View style={[styles.chip, { backgroundColor: Colors.warningSoft }]} accessibilityLabel="Waiting for a speech model">
+        <Ionicons name="hourglass-outline" size={11} color="#B86E00" />
+        <Text style={[styles.text, { color: Colors.warningText }]}>Waiting</Text>
       </View>
     );
   }

@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
 import { memo, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -10,10 +11,11 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { Shimmer } from '@/components/archive/shimmer';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording, type TranscriptSegment } from '@/data/recordings';
+import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatDuration } from '@/utils/format';
 
 type Props = {
@@ -96,6 +98,7 @@ function Notice({
   title,
   body,
   action,
+  actionIcon = 'refresh',
   onAction,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
@@ -103,6 +106,7 @@ function Notice({
   title: string;
   body: string;
   action: string;
+  actionIcon?: keyof typeof Ionicons.glyphMap;
   onAction: () => void;
 }) {
   return (
@@ -120,7 +124,7 @@ function Notice({
         accessibilityRole="button"
         accessibilityLabel={action}
         style={({ pressed }) => [styles.noticeButton, pressed && { opacity: 0.7 }]}>
-        <Ionicons name="refresh" size={15} color="#FFFFFF" />
+        <Ionicons name={actionIcon} size={15} color="#FFFFFF" />
         <Text style={styles.noticeButtonText}>{action}</Text>
       </Pressable>
     </Animated.View>
@@ -130,6 +134,8 @@ function Notice({
 /** Full-page, time-coded transcript for the recording screen; follows playback and seeks on tap. */
 export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveSegmentChange }: Props) {
   const { transcript, transcriptStatus } = recording;
+  const modelReady = useSelectedModelReady();
+  const waitingForModel = transcriptStatus === 'processing' && !modelReady;
   const [copied, setCopied] = useState(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const segmentY = useRef<number[]>([]);
@@ -202,14 +208,26 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
         </View>
       )}
 
-      {transcriptStatus === 'processing' && (
+      {waitingForModel && (
+        <Notice
+          icon="hourglass-outline"
+          tint={Colors.warning}
+          title="Waiting for a speech model"
+          body="Download a model in Profile and this recording is transcribed automatically."
+          action="Open Profile"
+          actionIcon="cloud-download-outline"
+          onAction={() => router.navigate('/profile')}
+        />
+      )}
+
+      {transcriptStatus === 'processing' && !waitingForModel && (
         <View>
           <View style={styles.processingRow}>
             <ActivityIndicator size="small" color={Colors.labelSecondary} />
             <Text style={styles.processingText}>
-              {recording.transcriptProgress
-                ? `Transcribing on device… ${Math.round(recording.transcriptProgress * 100)}%`
-                : 'Transcribing on device…'}
+              {recording.transcriptProgress === undefined
+                ? 'Queued for transcription…'
+                : `Transcribing on device… ${Math.round(recording.transcriptProgress * 100)}%`}
             </Text>
           </View>
           <SkeletonLines />
@@ -227,7 +245,18 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
         />
       )}
 
-      {(transcriptStatus === 'none' || (transcriptStatus === 'done' && transcript.length === 0)) && (
+      {transcriptStatus === 'done' && transcript.length === 0 && (
+        <Notice
+          icon="mic-off-outline"
+          tint={Colors.labelSecondary}
+          title="No speech detected"
+          body="Whisper didn’t hear any words in this recording. Try again with a larger model, or record closer to the microphone."
+          action="Try Again"
+          onAction={onRetry}
+        />
+      )}
+
+      {transcriptStatus === 'none' && (
         <Notice
           icon="document-text-outline"
           tint={Colors.tint}
@@ -250,7 +279,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.sm,
     marginBottom: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
   },
   heading: {
     ...Type.title3,

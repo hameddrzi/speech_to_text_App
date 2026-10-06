@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
@@ -9,6 +10,7 @@ const AVATAR = 96;
 const RING = 5;
 
 type Props = {
+  /** Empty until the user adds one; the hero then invites them to. */
   name: string;
   subtitle: string;
   onEdit: () => void;
@@ -42,20 +44,24 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
             end={{ x: 0.5, y: 0.7 }}
             style={StyleSheet.absoluteFill}
           />
-          <Text style={styles.initials} accessibilityElementsHidden importantForAccessibility="no">
-            {initials(name)}
-          </Text>
+          {name ? (
+            <Text style={styles.initials} accessibilityElementsHidden importantForAccessibility="no">
+              {initials(name)}
+            </Text>
+          ) : (
+            <Ionicons name="person" size={44} color="#FFFFFF" style={styles.placeholderIcon} />
+          )}
         </LinearGradient>
       </Glass>
 
-      <Text style={styles.name} accessibilityRole="header">
-        {name}
+      <Text style={styles.name} accessibilityRole="header" numberOfLines={1}>
+        {name || 'Voice'}
       </Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Edit profile"
+        accessibilityLabel={name ? 'Edit name' : 'Add your name'}
         onPress={onEdit}
         onPressIn={() => {
           scale.set(withSpring(0.94, { damping: 16, stiffness: 320 }));
@@ -65,7 +71,7 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
         }}>
         <Animated.View style={pillStyle}>
           <Glass radius={Radius.pill} intensity={50} strong style={styles.pill}>
-            <Text style={styles.pillText}>Edit</Text>
+            <Text style={styles.pillText}>{name ? 'Edit Name' : 'Add Your Name'}</Text>
           </Glass>
         </Animated.View>
       </Pressable>
@@ -98,10 +104,14 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
     textShadowOffset: { width: 0, height: 1 },
   },
+  placeholderIcon: {
+    opacity: 0.95,
+  },
   name: {
     ...Type.title2,
     fontSize: 26,
     marginTop: Spacing.md,
+    maxWidth: '90%',
   },
   subtitle: {
     ...Type.subhead,

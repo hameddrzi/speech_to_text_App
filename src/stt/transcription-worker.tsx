@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 
 import { transcribeFile } from '@/stt/engine';
 import { STT_SUPPORTED } from '@/stt/model-files';
+import { useSelectedModelReady } from '@/stt/use-model-download';
 import { useRecordings } from '@/store/recordings';
 import { useSettings } from '@/store/settings';
 
@@ -9,10 +10,12 @@ import { useSettings } from '@/store/settings';
  * Background job runner mounted once at the root: every recording with transcriptStatus 'processing'
  * is transcribed on device (one at a time, oldest first) and gets its time-coded segments.
  * Retry buttons only need to set the status back to 'processing'.
+ * Without a downloaded model, jobs simply wait and start as soon as the model is installed.
  */
 export function TranscriptionWorker() {
   const { recordings, updateRecording } = useRecordings();
   const { settings } = useSettings();
+  const modelReady = useSelectedModelReady();
   const activeId = useRef<string | null>(null);
 
   const next = recordings
@@ -32,6 +35,7 @@ export function TranscriptionWorker() {
       });
       return;
     }
+    if (!modelReady) return;
 
     activeId.current = id;
     let lastReported = 0;
@@ -57,7 +61,7 @@ export function TranscriptionWorker() {
           transcriptError: e instanceof Error ? e.message : 'Transcription failed.',
         });
       });
-  }, [next, settings.speechModel, updateRecording]);
+  }, [next, modelReady, settings.speechModel, updateRecording]);
 
   return null;
 }

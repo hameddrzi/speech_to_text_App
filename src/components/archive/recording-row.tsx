@@ -11,11 +11,12 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { StatusChip } from '@/components/archive/status-chip';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
+import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatDuration, formatRecordingDate } from '@/utils/format';
 
 export const ROW_LAYOUT = LinearTransition.springify().damping(22).stiffness(220).mass(0.9);
@@ -80,6 +81,8 @@ export const RecordingRow = memo(function RecordingRow({
 }: RecordingRowProps) {
   const swipeRef = useRef<SwipeableMethods>(null);
   const preview = transcriptText(recording);
+  const modelReady = useSelectedModelReady();
+  const waitingForModel = recording.transcriptStatus === 'processing' && !modelReady;
   const id = recording.id;
 
   const handleDelete = async () => {
@@ -94,14 +97,19 @@ export const RecordingRow = memo(function RecordingRow({
     swipeRef.current?.close();
   };
 
-  const statusLine =
-    recording.transcriptStatus === 'processing'
-      ? `Transcribing… ${Math.round((recording.transcriptProgress ?? 0) * 100)}%`
+  const statusLine = waitingForModel
+    ? 'Waiting for a speech model. Download one in Profile.'
+    : recording.transcriptStatus === 'processing'
+      ? recording.transcriptProgress === undefined
+        ? 'Queued for transcription'
+        : `Transcribing… ${Math.round(recording.transcriptProgress * 100)}%`
       : recording.transcriptStatus === 'failed'
-        ? 'Transcription failed — tap Retry'
+        ? (recording.transcriptError ?? 'Transcription failed. Tap Retry.')
         : recording.transcriptStatus === 'none'
           ? 'No transcript'
-          : null;
+          : recording.transcriptStatus === 'done'
+            ? 'No speech detected'
+            : null;
 
   return (
     <Animated.View layout={ROW_LAYOUT} exiting={FadeOut.duration(180)} style={styles.outer}>
@@ -156,7 +164,11 @@ export const RecordingRow = memo(function RecordingRow({
             </View>
             <View style={styles.metaRow}>
               <Text style={styles.date}>{formatRecordingDate(recording.createdAt)}</Text>
-              <StatusChip status={recording.transcriptStatus} onRetry={() => onRetry(id)} />
+              <StatusChip
+                status={recording.transcriptStatus}
+                waitingForModel={waitingForModel}
+                onRetry={() => onRetry(id)}
+              />
               <View style={styles.flex} />
               <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
             </View>
@@ -167,7 +179,11 @@ export const RecordingRow = memo(function RecordingRow({
                 {preview}
               </Text>
             ) : (
-              statusLine && <Text style={styles.previewMuted}>{statusLine}</Text>
+              statusLine && (
+                <Text style={styles.previewMuted} numberOfLines={2}>
+                  {statusLine}
+                </Text>
+              )
             )}
           </Pressable>
         </Glass>

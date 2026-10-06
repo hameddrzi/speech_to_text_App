@@ -1,8 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Constants from 'expo-constants';
-import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   interpolate,
   useAnimatedScrollHandler,
@@ -14,15 +13,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmbientBackground } from '@/components/ambient-background';
 import { Glass } from '@/components/glass';
 import { GlassSwitch } from '@/components/profile/glass-switch';
+import { NameSheet } from '@/components/profile/name-sheet';
 import { OptionSheet } from '@/components/profile/option-sheet';
 import { ProfileHero } from '@/components/profile/profile-hero';
 import { ProfileStats } from '@/components/profile/profile-stats';
 import { ProgressBar } from '@/components/profile/progress-bar';
 import { SEPARATOR_INSET, SettingsRow, SettingsSection } from '@/components/profile/settings-list';
-import { useModelDownload } from '@/components/profile/use-model-download';
+import { useModelDownload } from '@/stt/use-model-download';
 import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
+import { MODELS } from '@/stt/models';
 import { BYTES_PER_SECOND } from '@/stt/pcm';
 import {
   AUTO_DELETE_OPTIONS,
@@ -31,12 +32,11 @@ import {
   useSettings,
   type AppSettings,
 } from '@/store/settings';
+import { haptic } from '@/utils/haptics';
 
-const USER = { name: 'Hamed', subtitle: 'hamed@example.com' };
-const CONTACT_EMAIL = 'support@example.com';
 const COMPACT_HEADER_HEIGHT = 44;
 
-type SheetKind = 'model' | 'autoDelete' | null;
+type SheetKind = 'model' | 'autoDelete' | 'name' | null;
 
 function formatBytes(bytes: number): string {
   if (bytes < 1_000_000) return `${Math.max(1, Math.round(bytes / 1000))} KB`;
@@ -51,23 +51,13 @@ export default function ProfileScreen() {
   const download = useModelDownload();
   const [sheet, setSheet] = useState<SheetKind>(null);
 
-  // ── Haptics (respects the Haptics setting, skipped on web) ──
-  const haptic = useCallback(
-    (kind: 'selection' | 'impact' = 'selection', force = false) => {
-      if (Platform.OS === 'web' || (!settings.haptics && !force)) return;
-      if (kind === 'impact') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      else Haptics.selectionAsync();
-    },
-    [settings.haptics],
-  );
-
   const set = useCallback(
     <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
       update(key, value);
-      // Turning haptics on should itself be felt.
-      haptic('selection', key === 'haptics' && value === true);
+      // update() applies the Haptics switch first, so turning it on is felt and turning it off is not.
+      haptic.selection();
     },
-    [update, haptic],
+    [update],
   );
 
   // ── Large-title → compact header on scroll ──
@@ -87,14 +77,12 @@ export default function ProfileScreen() {
   const model = SPEECH_MODELS.find((m) => m.value === settings.speechModel) ?? SPEECH_MODELS[0];
   const isDownloaded = download.downloaded.includes(model.value);
   const isDownloading = download.downloading === model.value;
+  const downloadError = download.error?.model === model.value ? download.error.message : null;
 
   const storage = useMemo(() => {
     const audio = recordings.reduce((sum, r) => sum + r.duration * BYTES_PER_SECOND, 0);
     const text = recordings.reduce((sum, r) => sum + transcriptText(r).length * 2, 0);
-    const models = SPEECH_MODELS.filter((m) => download.downloaded.includes(m.value)).reduce(
-      (sum, m) => sum + m.sizeMB * 1_000_000,
-      0,
-    );
+    const models = MODELS.filter((m) => download.downloaded.includes(m.value)).reduce((sum, m) => sum + m.bytes, 0);
     const total = Math.max(1, audio + text + models);
     return { audio, text, models, total };
   }, [recordings, download.downloaded]);
@@ -116,11 +104,15 @@ export default function ProfileScreen() {
         </Animated.Text>
 
         <ProfileHero
-          name={USER.name}
-          subtitle={USER.subtitle}
+          name={settings.displayName}
+          subtitle={
+            recordings.length === 0
+              ? 'Voice notes, transcribed on this phone'
+              : `${recordings.length} ${recordings.length === 1 ? 'recording' : 'recordings'} on this phone`
+          }
           onEdit={() => {
-            haptic();
-            Alert.alert('Edit Profile', 'Profile editing is coming soon.');
+            haptic.selection();
+            setSheet('name');
           }}
         />
 
@@ -141,7 +133,7 @@ export default function ProfileScreen() {
             subtitle={`${model.detail} · ${model.hint}`}
             value={model.label}
             onPress={() => {
-              haptic();
+              haptic.selection();
               setSheet('model');
             }}
           />
@@ -158,7 +150,7 @@ export default function ProfileScreen() {
                   accessibilityLabel="Cancel download"
                   hitSlop={10}
                   onPress={() => {
-                    haptic();
+                    haptic.selection();
                     download.cancel();
                   }}>
                   <Ionicons name="stop-circle" size={26} color={Colors.tint} />
@@ -191,15 +183,15 @@ export default function ProfileScreen() {
             <SettingsRow
               icon="cloud-download"
               iconColor={Colors.tint}
-              title={download.error ? 'Download Failed' : 'Download Model'}
-              subtitle={download.error ?? `${model.label} · ${model.detail} · needed to transcribe`}
+              title={downloadError ? 'Download Failed' : 'Download Model'}
+              subtitle={downloadError ?? `${model.label} · ${model.detail} · needed to transcribe`}
               accessory={
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`Download ${model.label} model, ${model.detail}`}
                   hitSlop={8}
                   onPress={() => {
-                    haptic('impact');
+                    haptic.light();
                     download.start(model.value);
                   }}
                   style={({ pressed }) => [styles.getPill, pressed && { opacity: 0.6 }]}>
@@ -222,18 +214,6 @@ export default function ProfileScreen() {
               />
             }
           />
-          <SettingsRow
-            icon="text"
-            iconColor="#8E8E93"
-            title="Auto Punctuation"
-            accessory={
-              <GlassSwitch
-                accessibilityLabel="Auto punctuation"
-                value={settings.autoPunctuation}
-                onValueChange={(v) => set('autoPunctuation', v)}
-              />
-            }
-          />
         </SettingsSection>
 
         {/* ── Recording ── */}
@@ -241,18 +221,6 @@ export default function ProfileScreen() {
           header="Recording"
           footer="Recordings are saved as 16 kHz mono WAV, the format Whisper transcribes best — about 2 MB per minute.">
           <SettingsRow icon="mic" iconColor={Colors.record} title="Audio Format" value="WAV · 16 kHz" />
-          <SettingsRow
-            icon="play-forward"
-            iconColor={Colors.warning}
-            title="Skip Silence"
-            accessory={
-              <GlassSwitch
-                accessibilityLabel="Skip silence"
-                value={settings.skipSilence}
-                onValueChange={(v) => set('skipSilence', v)}
-              />
-            }
-          />
           <SettingsRow
             icon="pulse"
             iconColor="#FF2D55"
@@ -268,7 +236,7 @@ export default function ProfileScreen() {
         </SettingsSection>
 
         {/* ── Storage ── */}
-        <SettingsSection header="Storage">
+        <SettingsSection header="Storage" footer="Auto-delete runs each time the app starts. Favorites are always kept.">
           <View style={styles.storageCell} accessible accessibilityLabel={`Storage used: ${formatBytes(storage.total)}`}>
             <View style={styles.storageTop}>
               <Text style={Type.body}>Used</Text>
@@ -295,7 +263,7 @@ export default function ProfileScreen() {
             title="Delete Recordings"
             value={optionLabel(AUTO_DELETE_OPTIONS, settings.autoDelete)}
             onPress={() => {
-              haptic();
+              haptic.selection();
               setSheet('autoDelete');
             }}
           />
@@ -304,7 +272,7 @@ export default function ProfileScreen() {
         {/* ── Privacy ── */}
         <SettingsSection
           header="Privacy"
-          footer="Your audio and transcripts never leave this phone. Recording and speech recognition run entirely on device — no account or internet connection required.">
+          footer="Your audio and transcripts never leave this phone. Recording and speech recognition run entirely on device. No account needed, and the internet is only used once to download a speech model.">
           <SettingsRow
             icon="shield-checkmark"
             iconColor={Colors.success}
@@ -321,24 +289,6 @@ export default function ProfileScreen() {
         {/* ── About ── */}
         <SettingsSection header="About">
           <SettingsRow icon="information-circle" iconColor="#8E8E93" title="Version" value={version} />
-          <SettingsRow
-            icon="star"
-            iconColor="#FFCC00"
-            title="Rate App"
-            onPress={() => {
-              haptic();
-              Alert.alert('Thank you!', 'Ratings will open the App Store once the app is published.');
-            }}
-          />
-          <SettingsRow
-            icon="mail"
-            iconColor={Colors.tint}
-            title="Contact"
-            onPress={() => {
-              haptic();
-              Linking.openURL(`mailto:${CONTACT_EMAIL}`).catch(() => undefined);
-            }}
-          />
         </SettingsSection>
       </Animated.ScrollView>
 
@@ -364,6 +314,12 @@ export default function ProfileScreen() {
         }))}
         value={settings.speechModel}
         onSelect={(v) => set('speechModel', v)}
+        onClose={() => setSheet(null)}
+      />
+      <NameSheet
+        visible={sheet === 'name'}
+        name={settings.displayName}
+        onSave={(name) => update('displayName', name)}
         onClose={() => setSheet(null)}
       />
       <OptionSheet

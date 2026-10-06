@@ -6,18 +6,10 @@ import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } fro
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
-import { formatDuration } from '@/utils/format';
+import { formatDuration, formatTotalTime } from '@/utils/format';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-/** 45 → "45s", 754 → "12m", 8040 → "2h 14m" */
-export function formatTotalTime(totalSeconds: number): string {
-  const s = Math.max(0, Math.round(totalSeconds));
-  if (s < 60) return `${s}s`;
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
 
 const WEEKDAY = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const CHART_HEIGHT = 72;

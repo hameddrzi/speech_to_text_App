@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 

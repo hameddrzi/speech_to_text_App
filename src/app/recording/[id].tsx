@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { confirmDelete, shareRecording } from '@/components/archive/actions';
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { GlassIconButton, PlayButton, SkipButton, SpeedPill } from '@/components/archive/playback-controls';
 import { TranscriptCard } from '@/components/archive/transcript-card';
 import { SKIP_SECONDS, usePlayback } from '@/components/archive/use-playback';
@@ -102,8 +102,12 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
       accessibilityLabel={`${title}. Rename`}
       accessibilityHint="Double tap to edit the title"
       style={styles.titleRow}>
-      <Text style={[styles.title, styles.flexShrink]}>{title}</Text>
-      <Ionicons name="pencil" size={15} color={Colors.labelTertiary} style={styles.pencil} />
+      {/* The pencil is nested in the text so it follows the last line instead of drifting right on wrap. */}
+      <Text style={styles.title}>
+        {title}
+        {'\u00A0\u00A0'}
+        <Ionicons name="pencil" size={17} color={Colors.labelTertiary} />
+      </Text>
     </Pressable>
   );
 }
@@ -354,13 +358,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xs,
   },
   titleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
     marginTop: Spacing.md,
-  },
-  flexShrink: {
-    flexShrink: 1,
   },
   title: {
     ...Type.largeTitle,
@@ -371,9 +369,6 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
     borderBottomWidth: 1.5,
     borderBottomColor: Colors.tint,
-  },
-  pencil: {
-    marginTop: 4,
   },
   meta: {
     ...Type.subhead,

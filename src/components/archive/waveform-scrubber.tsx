@@ -9,7 +9,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { Colors } from '@/constants/theme';
 
 type Props = {
