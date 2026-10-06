@@ -29,7 +29,9 @@ whole recording at once, so it has more context and is more accurate.
   starts. This keeps each preview call short however long the recording is.
 - If the engine is still busy with the previous call, the tick is simply skipped (`transcribePcmIfIdle`).
   The preview never queues up behind itself.
-- Pausing stops the ticks but keeps the text.
+- Pausing stops the ticks but keeps the text. The microphone stream stays open while paused and its
+  audio is dropped: on Android, `@fugood/react-native-audio-pcm-stream` releases the recorder on
+  `stop()`, so a later `start()` would capture nothing.
 
 ### Final transcript: `TranscriptionWorker`
 
@@ -38,6 +40,10 @@ whole recording at once, so it has more context and is more accurate.
   and stores the segments (`{ start, end, text }` in seconds) with the recording.
 - Progress is reported in 5 % steps, shown as *Transcribing n%* in the Archive.
 - Errors are stored in `transcriptError` and shown next to a **Retry** button.
+- If the selected model isn't downloaded, jobs wait instead of failing and start once it is installed.
+- Sound tags Whisper emits for silence and noise (`[BLANK_AUDIO]`, `[Music]`, `(applause)`…) are
+  removed from both the live preview and the final transcript (`cleanText` in `engine.native.ts`).
+  A recording with nothing left shows *No speech detected*.
 - Recordings are processed one at a time, so several new recordings simply wait their turn.
 
 ## The engine: `engine.native.ts`
@@ -138,6 +144,7 @@ Tips that help with any model:
 |---|---|
 | *"The Small speech model is not downloaded yet"* | Download it in **Profile → Transcription**. |
 | Model download stuck | The app was sent to the background or the network dropped. Cancel and try again; the partial `.part` file is thrown away. |
-| Recording shows **Retry** | Usually it was recorded before a model was installed. Install the model and tap Retry. |
+| Recording shows **Waiting** | No speech model is downloaded. Download one in **Profile → Transcription**; the recording is transcribed automatically. |
+| Recording shows **Retry** | The transcription failed; the reason is shown on the row. Tap Retry. |
 | Live transcript stays empty | Check that *Live Transcript* is on and a model is downloaded. The first preview appears after about 1.5–3 s while the model loads. |
 | App won't install (`not enough space`) | The phone's storage is full. Free 1–2 GB; models need space too. |

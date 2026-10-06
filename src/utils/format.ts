@@ -8,6 +8,15 @@ export function formatDuration(totalSeconds: number): string {
   return `${h > 0 ? `${h}:` : ''}${mm}:${String(sec).padStart(2, '0')}`;
 }
 
+/** Total listening time, the same everywhere in the app: 45 → "45s", 754 → "12m", 8040 → "2h 14m" */
+export function formatTotalTime(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
 /** Recording timer with hundredths, like Voice Memos: 00:07,42 */
 export function formatTimer(ms: number): string {
   const total = Math.max(0, ms);

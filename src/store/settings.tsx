@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { formatBytes, MODELS, type SpeechModel } from '@/stt/models';
+import { setHapticsEnabled } from '@/utils/haptics';
 import { readJSON, writeJSON } from '@/utils/storage';
 
 export type { SpeechModel };
@@ -10,20 +11,15 @@ export type { SpeechModel };
  * The recorder and the on-device speech-to-text engine read it via useSettings().
  */
 
-export type AudioQuality = 'standard' | 'high' | 'lossless';
 export type AutoDeletePolicy = 'never' | '30d' | '1y';
 
 export type AppSettings = {
+  /** Shown on the Profile tab; empty until the user sets it. */
+  displayName: string;
   /** Which Whisper checkpoint to load on device. */
   speechModel: SpeechModel;
   /** Stream partial transcript while recording. */
   liveTranscript: boolean;
-  /** Restore punctuation / casing in the final transcript. */
-  autoPunctuation: boolean;
-  /** Recorder encoding preset. */
-  audioQuality: AudioQuality;
-  /** Trim long silences (VAD) before transcription / in playback. */
-  skipSilence: boolean;
   /** Haptic feedback across the app. */
   haptics: boolean;
   /** Auto-delete recordings older than this. */
@@ -31,11 +27,9 @@ export type AppSettings = {
 };
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  displayName: '',
   speechModel: 'small',
   liveTranscript: true,
-  autoPunctuation: true,
-  audioQuality: 'high',
-  skipSilence: false,
   haptics: true,
   autoDelete: 'never',
 };
@@ -50,13 +44,6 @@ export const SPEECH_MODELS: (Option<SpeechModel> & { sizeMB: number; hint: strin
   hint: m.hint,
   detail: formatBytes(m.bytes),
 }));
-
-/** Encoding presets; `bytesPerSecond` is used to estimate storage. */
-export const AUDIO_QUALITIES: (Option<AudioQuality> & { bytesPerSecond: number })[] = [
-  { value: 'standard', label: 'Standard', detail: 'AAC · 64 kbps · smallest files', bytesPerSecond: 8_000 },
-  { value: 'high', label: 'High', detail: 'AAC · 128 kbps · recommended', bytesPerSecond: 16_000 },
-  { value: 'lossless', label: 'Lossless', detail: 'WAV · 48 kHz · large files', bytesPerSecond: 96_000 },
-];
 
 export const AUTO_DELETE_OPTIONS: Option<AutoDeletePolicy>[] = [
   { value: 'never', label: 'Never' },
@@ -78,11 +65,23 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 const STORAGE_KEY = 'settings';
 
+/** Saved settings on top of the defaults. Keys from older versions (or of the wrong type) are dropped. */
+function loadSettings(): AppSettings {
+  const saved = readJSON<Record<string, unknown>>(STORAGE_KEY) ?? {};
+  const settings: AppSettings = { ...DEFAULT_SETTINGS };
+  for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof AppSettings)[]) {
+    if (typeof saved[key] === typeof DEFAULT_SETTINGS[key]) Object.assign(settings, { [key]: saved[key] });
+  }
+  if (!MODELS.some((m) => m.value === settings.speechModel)) settings.speechModel = DEFAULT_SETTINGS.speechModel;
+  if (!AUTO_DELETE_OPTIONS.some((o) => o.value === settings.autoDelete)) settings.autoDelete = DEFAULT_SETTINGS.autoDelete;
+  return settings;
+}
+
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AppSettings>(() => {
-    // Older versions also stored a transcription language; the app is English-only now.
-    const { language: _language, ...saved } = readJSON<Partial<AppSettings> & { language?: unknown }>(STORAGE_KEY) ?? {};
-    return { ...DEFAULT_SETTINGS, ...saved };
+    const loaded = loadSettings();
+    setHapticsEnabled(loaded.haptics);
+    return loaded;
   });
 
   useEffect(() => {
@@ -90,10 +89,15 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [settings]);
 
   const update = useCallback(<K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    // Applied right away so the toggle's own feedback already follows the new value.
+    if (key === 'haptics') setHapticsEnabled(value as boolean);
     setSettings((prev) => (prev[key] === value ? prev : { ...prev, [key]: value }));
   }, []);
 
-  const reset = useCallback(() => setSettings(DEFAULT_SETTINGS), []);
+  const reset = useCallback(() => {
+    setHapticsEnabled(DEFAULT_SETTINGS.haptics);
+    setSettings(DEFAULT_SETTINGS);
+  }, []);
 
   const value = useMemo(() => ({ settings, update, reset }), [settings, update, reset]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

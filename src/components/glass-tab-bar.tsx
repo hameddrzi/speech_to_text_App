@@ -1,13 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Haptics from 'expo-haptics';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Shadow, Spacing, TabBarBottomGap, TabBarHeight } from '@/constants/theme';
+import { haptic } from '@/utils/haptics';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
@@ -47,7 +47,7 @@ export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
           const onPress = () => {
             const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
             if (!focused && !event.defaultPrevented) {
-              if (Platform.OS !== 'web') Haptics.selectionAsync();
+              haptic.selection();
               navigation.navigate(route.name, route.params);
             }
           };

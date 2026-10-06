@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AmbientBackground } from '@/components/ambient-background';
 import { confirmDelete } from '@/components/archive/actions';
 import { EmptyState } from '@/components/archive/empty-state';
-import { haptic } from '@/components/archive/haptics';
+import { haptic } from '@/utils/haptics';
 import { RecordingRow, ROW_LAYOUT } from '@/components/archive/recording-row';
 import { SearchField } from '@/components/archive/search-field';
 import { SegmentedControl } from '@/components/archive/segmented-control';
@@ -22,6 +22,7 @@ import { Glass } from '@/components/glass';
 import { Colors, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
+import { formatTotalTime } from '@/utils/format';
 
 type Filter = 'all' | 'favorites' | 'transcribed';
 
@@ -32,11 +33,41 @@ const FILTERS = [
 ] as const satisfies readonly { value: Filter; label: string }[];
 
 const COMPACT_BAR_HEIGHT = 44;
+const DAY_MS = 86_400_000;
+
+type ListItem = { kind: 'section'; key: string; title: string } | { kind: 'row'; key: string; recording: Recording };
+
+/** iOS Notes-style buckets, newest first. */
+function sectionTitle(createdAt: string, startOfToday: number): string {
+  const t = new Date(createdAt).getTime();
+  if (t >= startOfToday) return 'Today';
+  if (t >= startOfToday - DAY_MS) return 'Yesterday';
+  if (t >= startOfToday - 7 * DAY_MS) return 'Previous 7 Days';
+  if (t >= startOfToday - 30 * DAY_MS) return 'Previous 30 Days';
+  return 'Older';
+}
+
+/** Interleaves section headers with the (already sorted) recordings. */
+function withSections(list: Recording[]): ListItem[] {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const items: ListItem[] = [];
+  let current = '';
+  for (const r of list) {
+    const title = sectionTitle(r.createdAt, today.getTime());
+    if (title !== current) {
+      current = title;
+      items.push({ kind: 'section', key: `section-${title}`, title });
+    }
+    items.push({ kind: 'row', key: r.id, recording: r });
+  }
+  return items;
+}
 
 function summary(list: Recording[]): string {
-  const minutes = Math.round(list.reduce((sum, r) => sum + r.duration, 0) / 60);
+  const total = formatTotalTime(list.reduce((sum, r) => sum + r.duration, 0));
   const count = `${list.length} ${list.length === 1 ? 'recording' : 'recordings'}`;
-  return list.length === 0 ? 'Nothing recorded yet' : `${count} · ${minutes} min`;
+  return list.length === 0 ? 'Nothing recorded yet' : `${count} · ${total}`;
 }
 
 export default function ArchiveScreen() {
@@ -48,7 +79,7 @@ export default function ArchiveScreen() {
 
   const data = useMemo(() => {
     const q = query.trim().toLocaleLowerCase();
-    return recordings
+    const matches = recordings
       .filter((r) => {
         if (filter === 'favorites' && !r.favorite) return false;
         if (filter === 'transcribed' && r.transcriptStatus !== 'done') return false;
@@ -56,6 +87,7 @@ export default function ArchiveScreen() {
         return r.title.toLocaleLowerCase().includes(q) || transcriptText(r).toLocaleLowerCase().includes(q);
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return withSections(matches);
   }, [recordings, query, filter]);
 
   // Large title → compact glass bar, iOS style.
@@ -122,7 +154,7 @@ export default function ArchiveScreen() {
 
       <Animated.FlatList
         data={data}
-        keyExtractor={(r) => r.id}
+        keyExtractor={(item) => item.key}
         itemLayoutAnimation={ROW_LAYOUT}
         onScroll={onScroll}
         scrollEventThrottle={16}
@@ -150,16 +182,22 @@ export default function ArchiveScreen() {
           </View>
         }
         ListEmptyComponent={<EmptyState kind={recordings.length === 0 ? 'empty' : emptyKind} query={query} />}
-        renderItem={({ item }) => (
-          <RecordingRow
-            recording={item}
-            onOpen={onOpen}
-            onToggleFavorite={toggleFavorite}
-            onDelete={onDelete}
-            onRetry={onRetry}
-            onSwipeOpen={onSwipeOpen}
-          />
-        )}
+        renderItem={({ item }) =>
+          item.kind === 'section' ? (
+            <Text style={styles.sectionTitle} accessibilityRole="header">
+              {item.title}
+            </Text>
+          ) : (
+            <RecordingRow
+              recording={item.recording}
+              onOpen={onOpen}
+              onToggleFavorite={toggleFavorite}
+              onDelete={onDelete}
+              onRetry={onRetry}
+              onSwipeOpen={onSwipeOpen}
+            />
+          )
+        }
       />
 
       {/* Compact frosted bar that fades in once the large title scrolls away. */}
@@ -207,6 +245,15 @@ const styles = StyleSheet.create({
   },
   segmented: {
     marginTop: Spacing.md,
+  },
+  sectionTitle: {
+    ...Type.footnote,
+    fontWeight: '600',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+    marginLeft: Spacing.xs,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
   compactBar: {
     position: 'absolute',

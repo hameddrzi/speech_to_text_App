@@ -39,6 +39,17 @@ async function getContext(model: SpeechModel): Promise<WhisperContext> {
 /** The app transcribes English only. */
 const OPTIONS: TranscribeOptions = { language: 'en', maxLen: 0 };
 
+/**
+ * Whisper writes sound events instead of words for silence and noise: "[BLANK_AUDIO]", "[Music]",
+ * "(upbeat music)", "*laughs*". They are not speech, so they never reach the transcript.
+ */
+const NON_SPEECH =
+  /\[[^\]]*\]|\((?:[^)]*\b(?:music|silence|applause|laugh\w*|noise|inaudible|cough\w*|sigh\w*|blank audio)\b[^)]*)\)|\*[^*]*\*/gi;
+
+function cleanText(text: string): string {
+  return text.replace(NON_SPEECH, ' ').replace(/\s+/g, ' ').trim();
+}
+
 function exclusive<T>(job: () => Promise<T>): Promise<T> {
   const run = chain.then(async () => {
     busy = true;
@@ -74,7 +85,7 @@ export function transcribeFile(uri: string, req: SttRequest): Promise<SttSegment
     });
     const result = await promise;
     return result.segments
-      .map((s) => ({ start: s.t0 / 100, end: s.t1 / 100, text: s.text.trim() }))
+      .map((s) => ({ start: s.t0 / 100, end: s.t1 / 100, text: cleanText(s.text) }))
       .filter((s) => s.text.length > 0);
   });
 }
@@ -86,7 +97,7 @@ export function transcribePcmIfIdle(pcm: Uint8Array, req: SttRequest): Promise<s
     const buffer = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer;
     const { promise } = ctx.transcribeData(buffer, OPTIONS);
     const result = await promise;
-    return result.result.trim();
+    return cleanText(result.result);
   });
 }
 

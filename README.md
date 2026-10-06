@@ -23,17 +23,18 @@ pills and tab bar.
 - One-tap recording with pause, resume, discard and save.
 - Live scrolling waveform and a precise timer (`00:00,00`).
 - **Live transcript** card: text appears while you speak (a rolling Whisper preview, updated about every 1.5 s).
+- Model status pill in the header: shows the active speech model, download progress, or a shortcut to get one.
 
 **Archive**
-- All recordings with search across titles *and* transcript text.
+- All recordings, grouped by date (Today, Yesterday, Previous 7 Days…), with search across titles *and* transcript text.
 - Filters: All · Favorites · Transcribed.
-- Status chips per recording: *Transcribing n%*, *Text*, *Retry*.
+- Status chips per recording: *Transcribing*, *Waiting* (no speech model yet), *Transcript*, *Retry*.
 - Detail screen with a scrubbable waveform, playback speed, ±15 s skip, rename, favorite and delete.
 - Time-coded transcript that highlights and follows the audio as it plays; tap a line to jump there; copy all text.
 
 **Profile**
-- Weekly activity stats.
-- Transcription settings: speech model, live transcript on/off.
+- Your name (optional, stays on the phone) and weekly activity stats.
+- Transcription settings: speech model, live transcript on/off, haptics on/off.
 - Model manager: download, switch and delete Whisper models, with progress.
 - Storage overview and an auto-delete policy (never / 30 days / 1 year; favorites are always kept).
 
@@ -132,7 +133,7 @@ src/
 │   ├── ambient-background.tsx
 │   ├── record/               # Record button, waveform, live transcript card…
 │   ├── archive/              # Rows, search, playback hook, transcript card, scrubber…
-│   └── profile/              # Settings list, option sheets, model download hook…
+│   └── profile/              # Settings list, option and name sheets, stats…
 ├── stt/                      # On-device speech-to-text (Whisper)
 ├── hooks/                    # Recording session (native + web variants)
 ├── store/                    # Recordings and settings (React context + JSON persistence)
@@ -163,8 +164,8 @@ The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo ru
 - **iOS** has not been built or tested on a device yet.
 - **English only.** Transcription always runs with Whisper's language set to English.
 - **Web** is a UI preview: recording is simulated and transcription is unavailable.
-- Some Profile settings are saved but **not applied yet**: *Auto Punctuation*, *Skip Silence*,
-  *Audio Format* and the *Haptics* switch.
+- While a long recording is being transcribed in the background, the live preview of a new recording
+  stays empty until that job finishes (the engine runs one job at a time).
 - Speaker labels (who said what) are not supported.
 
 ---

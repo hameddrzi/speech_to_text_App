@@ -66,7 +66,7 @@ They are subtle enough that the screen still reads as white.
 | `separator` | 12 % gray | Dividers |
 | `record` | `#FF3B30` | Record button, live waveform, destructive actions |
 | `tint` | `#0A84FF` | Links, selection, *Transcribing* state |
-| `success` | `#34C759` | *Text* (transcribed) state |
+| `success` | `#34C759` | *Transcript* (transcribed) state |
 | `warning` | `#FF9F0A` | Warnings |
 
 Every accent also has a `…Soft` variant (10–12 % opacity) for chip backgrounds.
@@ -106,7 +106,8 @@ Shadow    soft (cards) · lifted (floating controls)
 ## Motion and feedback
 
 - Animations use **Reanimated springs**: the record button's morph, the waveform.
-- Selections and key actions trigger a light **haptic** tap (`expo-haptics`).
+- Selections and key actions trigger a light **haptic** tap. Always go through `haptic` in
+  `src/utils/haptics.ts` (never `expo-haptics` directly), so the Haptics switch in Profile is respected.
 - The app's **React Compiler** is on, so components are memoized automatically; avoid hand-written
   `useMemo` / `useCallback` unless profiling shows a need.
 

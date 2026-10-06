@@ -30,7 +30,13 @@ export const Colors = {
   tint: '#0A84FF',
   tintSoft: 'rgba(10,132,255,0.10)',
   success: '#34C759',
+  successSoft: 'rgba(52,199,89,0.12)',
+  /** Darker green for text on successSoft (the accent itself is too light to read). */
+  successText: '#1F8A3B',
   warning: '#FF9F0A',
+  warningSoft: 'rgba(255,159,10,0.14)',
+  /** Darker orange for text on warningSoft. */
+  warningText: '#B86E00',
 
   // Waveform
   waveActive: '#FF3B30',

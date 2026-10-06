@@ -84,6 +84,8 @@ and `toggleFavorite`. Every change is written back to disk right away.
 - The Record screen saves a new recording with `transcriptStatus: 'processing'`.
 - `TranscriptionWorker` picks the oldest `'processing'` recording, transcribes it, and sets
   `'done'` (with segments) or `'failed'` (with a message).
+- If the selected speech model isn't downloaded, the job waits (shown as *Waiting* in the Archive) and
+  starts as soon as the model is installed.
 - **Retry** only sets the status back to `'processing'`.
 - A job interrupted because the app was closed is still `'processing'` on the next launch, so it
   starts again automatically.
@@ -92,10 +94,14 @@ and `toggleFavorite`. Every change is written back to disk right away.
 
 | Setting | Default | Used by |
 |---|---|---|
+| `displayName` | `''` | Profile header |
 | `speechModel` | `small` | Live preview and the background worker |
 | `liveTranscript` | `true` | Record screen (turns the rolling preview on or off) |
 | `autoDelete` | `never` | Recordings store, applied once per app launch |
-| `autoPunctuation`, `skipSilence`, `audioQuality`, `haptics` | — | Saved, **not applied yet** |
+| `haptics` | `true` | Every haptic in the app, through `src/utils/haptics.ts` |
+
+Saved settings are merged over the defaults key by key, so keys from older versions (or with a wrong
+type) are dropped on load.
 
 ## Storage
 
