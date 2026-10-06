@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Children, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
@@ -93,7 +93,9 @@ export function SettingsRow({
   const showChevron = chevron ?? (!!onPress && !accessory);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    backgroundColor: `rgba(60,60,67,${0.1 * pressed.value})`,
+    // interpolateColor, not a template string: a settling spring reaches values like 1e-8, and Android
+    // crashes on a color such as "rgba(60,60,67,1e-8)".
+    backgroundColor: interpolateColor(pressed.value, [0, 1], ['rgba(60,60,67,0)', 'rgba(60,60,67,0.1)']),
     transform: [{ scale: 1 - pressed.value * 0.012 }],
   }));
 

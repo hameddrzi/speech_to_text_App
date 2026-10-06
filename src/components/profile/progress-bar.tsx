@@ -21,7 +21,8 @@ function Fill({ value, color }: Segment) {
   useEffect(() => {
     w.set(withTiming(Math.max(0, Math.min(1, value)), { duration: 420 }));
   }, [value, w]);
-  const style = useAnimatedStyle(() => ({ width: `${w.value * 100}%` }));
+  // toFixed keeps tiny values out of exponent notation ("1e-7%"), which Android can't parse.
+  const style = useAnimatedStyle(() => ({ width: `${(w.value * 100).toFixed(3)}%` as `${number}%` }));
   return <Animated.View style={[styles.fill, { backgroundColor: color }, style]} />;
 }
 

@@ -19,7 +19,7 @@ import { transcriptText, type Recording } from '@/data/recordings';
 import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatDuration, formatRecordingDate } from '@/utils/format';
 
-export const ROW_LAYOUT = LinearTransition.springify().damping(22).stiffness(220).mass(0.9);
+export const ROW_LAYOUT = LinearTransition.duration(220);
 
 export type RecordingRowProps = {
   recording: Recording;

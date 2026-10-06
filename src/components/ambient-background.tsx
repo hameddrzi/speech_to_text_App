@@ -1,5 +1,5 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
+import Svg, { Circle, Defs, RadialGradient, Stop } from 'react-native-svg';
 
 import { Colors } from '@/constants/theme';
 
@@ -26,32 +26,45 @@ const LAYOUTS = {
   ],
 } as const;
 
+/** Blobs are drawn larger than their nominal size so the fade has room to dissolve into white. */
+const SPREAD = 1.5;
+
 /**
  * White canvas with very soft, out-of-focus pastel light so the frosted glass above it has something to refract.
+ * Each blob is a radial gradient that fades to fully transparent, so there is never a visible edge — the same
+ * look on iOS, Android and web, without relying on a blur view.
  * Place it as the first child of a screen (it fills absolutely and ignores touches).
  */
 export function AmbientBackground({ variant = 'record' }: Props) {
+  const blobs = LAYOUTS[variant];
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background }]} />
-      {LAYOUTS[variant].map((b, i) => (
-        <LinearGradient
-          key={i}
-          colors={[b.color, 'rgba(255,255,255,0)']}
-          start={{ x: 0.5, y: 0.5 }}
-          end={{ x: 1, y: 1 }}
-          style={{
-            position: 'absolute',
-            top: b.top,
-            left: b.left,
-            width: b.size,
-            height: b.size,
-            borderRadius: b.size / 2,
-            opacity: 0.7,
-          }}
-        />
-      ))}
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(255,255,255,0.35)' }]} />
+    <View style={[StyleSheet.absoluteFill, styles.canvas]} pointerEvents="none">
+      <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+        <Defs>
+          {blobs.map((b, i) => (
+            <RadialGradient key={i} id={`${variant}-blob-${i}`} cx="50%" cy="50%" r="50%">
+              <Stop offset="0" stopColor={b.color} stopOpacity={0.85} />
+              <Stop offset="0.45" stopColor={b.color} stopOpacity={0.45} />
+              <Stop offset="1" stopColor={b.color} stopOpacity={0} />
+            </RadialGradient>
+          ))}
+        </Defs>
+        {blobs.map((b, i) => (
+          <Circle
+            key={i}
+            cx={b.left + b.size / 2}
+            cy={b.top + b.size / 2}
+            r={(b.size / 2) * SPREAD}
+            fill={`url(#${variant}-blob-${i})`}
+          />
+        ))}
+      </Svg>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  canvas: {
+    backgroundColor: Colors.background,
+  },
+});
