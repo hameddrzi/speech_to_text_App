@@ -22,6 +22,7 @@ import { SearchField } from '@/components/archive/search-field';
 import { SegmentedControl } from '@/components/archive/segmented-control';
 import { Glass } from '@/components/glass';
 import { Travel, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
@@ -30,10 +31,10 @@ import { formatTotalTime } from '@/utils/format';
 type Filter = 'all' | 'favorites' | 'transcribed';
 
 const FILTERS = [
-  { value: 'all', label: 'All' },
-  { value: 'favorites', label: 'Favorites' },
-  { value: 'transcribed', label: 'Transcribed' },
-] as const satisfies readonly { value: Filter; label: string }[];
+  { value: 'all', label: 'All', testID: TestIDs.archive.filterAll },
+  { value: 'favorites', label: 'Favorites', testID: TestIDs.archive.filterFavorites },
+  { value: 'transcribed', label: 'Transcribed', testID: TestIDs.archive.filterTranscribed },
+] as const satisfies readonly { value: Filter; label: string; testID: string }[];
 
 const COMPACT_BAR_HEIGHT = 44;
 const DAY_MS = 86_400_000;
@@ -172,6 +173,7 @@ export default function ArchiveScreen() {
       <AmbientBackground variant="archive" />
 
       <Animated.FlatList
+        testID={TestIDs.archive.list}
         data={data}
         keyExtractor={(item) => item.key}
         itemLayoutAnimation={ROW_LAYOUT}

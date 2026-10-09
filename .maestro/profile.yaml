@@ -1,0 +1,165 @@
+# Profile: name sheet (save, cancel, backdrop), switches, speech model sheet,
+# delete-recordings sheet, and scrolling to the bottom of the page.
+appId: com.voicetranscript.app
+name: profile
+tags:
+  - profile
+  - quick
+---
+- runFlow: subflows/launch-clean.yaml
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "profile-name-edit"
+    timeout: 5000
+- assertVisible: "Add Your Name|Add your name"
+- takeScreenshot: profile_01_top
+
+# ── Name sheet: save ──
+- tapOn:
+    id: "profile-name-edit"
+- extendedWaitUntil:
+    visible:
+      id: "name-sheet-input"
+    timeout: 5000
+- assertVisible:
+    id: "name-sheet-save"
+- assertVisible:
+    id: "name-sheet-cancel"
+- inputText: "E2E Tester"
+- takeScreenshot: profile_02_name_sheet
+- tapOn:
+    id: "name-sheet-save"
+- extendedWaitUntil:
+    notVisible:
+      id: "name-sheet-input"
+    timeout: 5000
+- assertVisible: "E2E Tester"
+- assertVisible: "Edit Name|Edit name"
+
+# ── Name sheet: cancel keeps the old name ──
+- tapOn:
+    id: "profile-name-edit"
+- extendedWaitUntil:
+    visible:
+      id: "name-sheet-input"
+    timeout: 5000
+- eraseText: 20
+- inputText: "Discarded"
+- tapOn:
+    id: "name-sheet-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "name-sheet-input"
+    timeout: 5000
+- assertVisible: "E2E Tester"
+- assertNotVisible: "Discarded"
+
+# ── Name sheet: tapping the dimmed backdrop above the sheet closes it ──
+- tapOn:
+    id: "profile-name-edit"
+- extendedWaitUntil:
+    visible:
+      id: "sheet-backdrop"
+    timeout: 5000
+# Top of the screen is backdrop even with the keyboard up (hideKeyboard is avoided: on
+# Android it can send Back, which would close the sheet the wrong way).
+- tapOn:
+    point: "50%,12%"
+- extendedWaitUntil:
+    notVisible:
+      id: "name-sheet-input"
+    timeout: 5000
+
+# ── Switches (each toggled and restored) ──
+- tapOn:
+    id: "live-transcript-switch"
+- takeScreenshot: profile_03_live_transcript_off
+- tapOn:
+    id: "live-transcript-switch"
+- scrollUntilVisible:
+    element:
+      id: "haptics-switch"
+    direction: DOWN
+- tapOn:
+    id: "haptics-switch"
+- takeScreenshot: profile_04_haptics_off
+- tapOn:
+    id: "haptics-switch"
+
+# ── Speech model sheet (open, look, Done) ──
+- scrollUntilVisible:
+    element:
+      id: "speech-model-row"
+    direction: UP
+- tapOn:
+    id: "speech-model-row"
+- extendedWaitUntil:
+    visible:
+      id: "model-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "model-option-tiny"
+- assertVisible:
+    id: "model-option-base"
+- assertVisible:
+    id: "model-option-small"
+- assertVisible:
+    id: "model-option-turbo"
+- takeScreenshot: profile_05_model_sheet
+- tapOn:
+    id: "model-sheet-done"
+- extendedWaitUntil:
+    notVisible:
+      id: "model-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "model-download-get"
+
+# ── Delete Recordings sheet: pick "After 30 Days", then back to "Never" ──
+- scrollUntilVisible:
+    element:
+      id: "delete-recordings-row"
+    direction: DOWN
+- tapOn:
+    id: "delete-recordings-row"
+- extendedWaitUntil:
+    visible:
+      id: "auto-delete-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "auto-delete-option-never"
+- assertVisible:
+    id: "auto-delete-option-1y"
+- takeScreenshot: profile_06_delete_sheet
+- tapOn:
+    id: "auto-delete-option-30d"
+- extendedWaitUntil:
+    notVisible:
+      id: "auto-delete-sheet"
+    timeout: 5000
+- assertVisible: "After 30 Days"
+- tapOn:
+    id: "delete-recordings-row"
+- extendedWaitUntil:
+    visible:
+      id: "auto-delete-sheet"
+    timeout: 5000
+- tapOn:
+    id: "auto-delete-option-never"
+- extendedWaitUntil:
+    notVisible:
+      id: "auto-delete-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "delete-recordings-row"
+    text: ".*Never.*"
+
+# ── Bottom of the page ──
+- scrollUntilVisible:
+    element:
+      text: "Version.*"
+    direction: DOWN
+- assertVisible: "On-Device Processing.*"
+- takeScreenshot: profile_07_bottom

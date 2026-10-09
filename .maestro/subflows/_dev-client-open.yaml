@@ -1,0 +1,30 @@
+# OPTIONAL: drive a development build instead of a release/preview build.
+#
+# A dev build starts in the expo-dev-client launcher, not in the app. This subflow deep-links the
+# launcher straight to your Metro server so the JS bundle loads without manual taps:
+#
+#   npx expo start --dev-client                       # note the URL, e.g. http://192.168.1.20:8081
+#   maestro test -e METRO_URL=http://192.168.1.20:8081 .maestro/subflows/_dev-client-open.yaml
+#
+# With `adb reverse tcp:8081 tcp:8081` the default http://localhost:8081 works over USB.
+# To run the whole suite on a dev build, add `- runFlow: _dev-client-open.yaml` right after the
+# launchApp in subflows/launch-clean.yaml (and pass -e METRO_URL=...).
+#
+# Release builds are the primary target (no Metro, no dev menu overlays, real performance);
+# see docs/testing.md.
+appId: com.voicetranscript.app
+env:
+  METRO_URL: http://localhost:8081
+---
+- openLink: voicetranscript://expo-development-client/?url=${encodeURIComponent(METRO_URL)}
+# The first bundle load can take a while.
+- extendedWaitUntil:
+    visible:
+      id: "tab-record"
+    timeout: 120000
+# The dev menu shows a one-time onboarding sheet on first launch.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"

@@ -10,6 +10,7 @@ import Animated, {
 
 import { FadeSwap } from '@/components/fade-swap';
 import { Duration, Easings, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import type { RecordPhase } from '@/hooks/record-session';
 
@@ -62,6 +63,7 @@ export function RecordStatus({ phase, message, simulated }: Props) {
           />
         ) : null}
         <Text
+          testID={TestIDs.record.status}
           style={[styles.label, message ? { color: Colors.record } : null, recording && { color: Colors.record }]}
           numberOfLines={1}>
           {label}

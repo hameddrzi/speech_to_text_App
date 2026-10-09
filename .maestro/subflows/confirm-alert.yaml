@@ -1,0 +1,26 @@
+# Taps the confirm (destructive) button of a React Native Alert.alert([Cancel, <Confirm>]).
+#
+# Android: RN maps the last button to the dialog's positive button, android:id/button1, which
+# is stable across OEM skins and capitalisation ("Delete" vs "DELETE").
+# iOS: the alert button is matched by its title (env CONFIRM_TEXT, default "Delete").
+appId: com.voicetranscript.app
+env:
+  CONFIRM_TEXT: Delete
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "android:id/button1"
+          timeout: 5000
+      - takeScreenshot: alert_confirm
+      - tapOn:
+          id: "android:id/button1"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - takeScreenshot: alert_confirm
+      - tapOn: ${CONFIRM_TEXT}

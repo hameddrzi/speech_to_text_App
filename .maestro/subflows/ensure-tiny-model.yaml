@@ -1,0 +1,29 @@
+# Selects the Tiny speech model in Profile and downloads it if it isn't on the phone yet
+# (78 MB, needs network). Ends on the Profile tab with "Model Ready" showing.
+appId: com.voicetranscript.app
+---
+- tapOn:
+    id: "tab-profile"
+- tapOn:
+    id: "speech-model-row"
+- extendedWaitUntil:
+    visible:
+      id: "model-sheet"
+    timeout: 5000
+- tapOn:
+    id: "model-option-tiny"
+# The sheet closes itself right after a pick.
+- extendedWaitUntil:
+    notVisible:
+      id: "model-sheet"
+    timeout: 5000
+- runFlow:
+    when:
+      visible:
+        id: "model-download-get"
+    commands:
+      - tapOn:
+          id: "model-download-get"
+- extendedWaitUntil:
+    visible: "Model Ready"
+    timeout: 300000

@@ -1,0 +1,30 @@
+# Maestro workspace config for `maestro test .maestro`.
+#
+# - Only the top-level *.yaml files are flows; reusable steps live in subflows/ and are never run
+#   on their own.
+# - `manual` flows need a human to prepare the phone first and are excluded here; run them by
+#   file path. For a quick pass also exclude the long ones on the command line:
+#     maestro test .maestro --exclude-tags slow,network,manual,stress
+# - Order matters for two flows: model-download leaves the Tiny model installed and
+#   transcribe-e2e (the only flow that does not clear app data) reuses it, so it runs right
+#   after model-download. Every other flow starts from a clean install state.
+# - Names below are each flow's `name:`; flows listed here run sequentially in this order.
+flows:
+  - "*"
+
+excludeTags:
+  - manual
+
+executionOrder:
+  continueOnFailure: true
+  flowsOrder:
+    - smoke
+    - record-basic
+    - record-discard
+    - archive
+    - detail
+    - export
+    - profile
+    - model-download
+    - transcribe-e2e
+    - stress

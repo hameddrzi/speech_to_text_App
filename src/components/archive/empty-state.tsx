@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Duration, riseIn, Travel, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -34,7 +35,9 @@ export function EmptyState({ kind, query = '' }: Props) {
   const { reduced } = useMotion();
   return (
     // Keyed by kind in the list, so switching filters into another empty state also eases in.
-    <Animated.View entering={riseIn(reduced, { duration: Duration.slow, distance: Travel.empty })} style={styles.wrap}>
+    <Animated.View
+      testID={TestIDs.archive.emptyState}
+      entering={riseIn(reduced, { duration: Duration.slow, distance: Travel.empty })} style={styles.wrap}>
       <Glass strong radius={Radius.xl} style={styles.card}>
         <View style={styles.art}>
           <Glass radius={Radius.lg} elevated={false} style={[styles.plate, styles.plateBack]} />

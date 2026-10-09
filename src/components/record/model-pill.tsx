@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Glass } from '@/components/glass';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/store/settings';
 import { STT_SUPPORTED } from '@/stt/model-files';
@@ -35,6 +36,7 @@ export function ModelPill({ disabled }: { disabled?: boolean }) {
 
   return (
     <Pressable
+      testID={TestIDs.record.modelPill}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={a11y}

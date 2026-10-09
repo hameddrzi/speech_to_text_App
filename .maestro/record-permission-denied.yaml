@@ -1,0 +1,77 @@
+# Microphone denied → the Record screen shows the "Microphone access needed" card instead of
+# crashing or recording silence.
+#
+# Tagged `manual` (excluded by default in config.yaml) because denial behaves differently per
+# OS version and OEM. Run it on its own:
+#
+#   maestro --device <id> test .maestro/record-permission-denied.yaml
+#
+# The flow asks Maestro to launch with the microphone denied. If your phone still records
+# (some OEM builds ignore `pm revoke` for a running process), deny it by hand first:
+#   - Android: Settings → Apps → Voice → Permissions → Microphone → Don't allow
+#     or: adb -s <id> shell pm revoke com.voicetranscript.app android.permission.RECORD_AUDIO
+#   - iOS simulator: xcrun simctl privacy booted revoke microphone com.voicetranscript.app
+# and change `clearState: true` below to `false` so the denial survives the launch.
+#
+# Two outcomes are valid:
+#   - "denied":  the OS can still ask → card says "Allow Microphone" (we tap "Don't allow" again)
+#   - "blocked": the OS won't ask any more → card says "Open Settings"
+appId: com.voicetranscript.app
+name: record-permission-denied
+tags:
+  - manual
+  - record
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+    permissions:
+      microphone: deny
+- extendedWaitUntil:
+    visible:
+      id: "tab-record"
+    timeout: 30000
+
+- tapOn:
+    id: "record-button"
+
+# If Android asks again, deny again.
+- extendedWaitUntil:
+    visible: "Don.t allow|DON.T ALLOW|Deny|DENY|Don.t Allow"
+    timeout: 3000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "com.android.permissioncontroller:id/permission_deny_button"
+    commands:
+      - tapOn:
+          id: "com.android.permissioncontroller:id/permission_deny_button"
+- runFlow:
+    when:
+      visible: "Don.t allow|DON.T ALLOW|Deny|DENY|Don.t Allow"
+    commands:
+      - tapOn: "Don.t allow|DON.T ALLOW|Deny|DENY|Don.t Allow"
+
+- extendedWaitUntil:
+    visible:
+      id: "permission-card"
+    timeout: 10000
+- assertVisible: "Microphone access needed"
+- assertVisible:
+    id: "permission-card-action"
+- assertNotVisible:
+    id: "record-status"
+    text: "Recording.*"
+- takeScreenshot: record-permission-denied_01_card
+
+# Dismiss brings the live transcript card back.
+- tapOn:
+    id: "permission-card-dismiss"
+- extendedWaitUntil:
+    visible:
+      id: "live-transcript-card"
+    timeout: 5000
+- assertNotVisible:
+    id: "permission-card"
+- takeScreenshot: record-permission-denied_02_dismissed

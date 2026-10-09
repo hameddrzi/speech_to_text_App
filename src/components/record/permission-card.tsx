@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Duration, fadeIn, fadeOut } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -17,7 +18,7 @@ type Props = {
 /** Friendly glass card explaining why the microphone is needed, with a single clear action. */
 export function PermissionCard({ blocked, onAllow, onOpenSettings, onDismiss }: Props) {
   return (
-    <Animated.View entering={fadeIn(Duration.enter)} exiting={fadeOut()}>
+    <Animated.View testID={TestIDs.record.permissionCard} entering={fadeIn(Duration.enter)} exiting={fadeOut()}>
       <Glass radius={Radius.lg} strong style={styles.card}>
         <View style={styles.row}>
           <View style={styles.icon}>
@@ -32,6 +33,7 @@ export function PermissionCard({ blocked, onAllow, onOpenSettings, onDismiss }: 
             </Text>
           </View>
           <Pressable
+            testID={TestIDs.record.permissionDismiss}
             accessibilityRole="button"
             accessibilityLabel="Dismiss"
             hitSlop={10}
@@ -40,6 +42,7 @@ export function PermissionCard({ blocked, onAllow, onOpenSettings, onDismiss }: 
           </Pressable>
         </View>
         <Pressable
+          testID={TestIDs.record.permissionAction}
           accessibilityRole="button"
           accessibilityLabel={blocked ? 'Open Settings' : 'Allow microphone'}
           onPress={blocked ? onOpenSettings : onAllow}

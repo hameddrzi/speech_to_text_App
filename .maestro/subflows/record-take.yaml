@@ -1,0 +1,26 @@
+# Records one take and saves it.
+#
+# Env:
+#   TIMER_REGEX  regex the timer must match before the take is stopped.
+#                The timer reads "mm:ss,cc" on screen (e.g. 00:03,41). On iOS Maestro sees its
+#                accessibility label instead ("Elapsed 3 seconds"), so callers pass an
+#                alternation that covers both, e.g. '00:0[3-9],[0-9]{2}|Elapsed [3-9] seconds'.
+# Ends idle on the Record tab with the "Saved to Archive" toast showing.
+appId: com.voicetranscript.app
+---
+- tapOn:
+    id: "tab-record"
+- tapOn:
+    id: "record-button"
+- runFlow: allow-mic-permission.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-timer"
+      text: ${TIMER_REGEX}
+    timeout: 60000
+- tapOn:
+    id: "record-button"
+- extendedWaitUntil:
+    visible:
+      id: "saved-toast"
+    timeout: 15000

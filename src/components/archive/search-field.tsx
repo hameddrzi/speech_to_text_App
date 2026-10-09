@@ -4,6 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
 import { Duration, fadeIn, fadeOut } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 
 type Props = {
@@ -18,6 +19,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search' }: Pro
     <Glass radius={Radius.md} elevated={false} intensity={30} style={styles.field}>
       <Ionicons name="search" size={17} color={Colors.labelSecondary} />
       <TextInput
+        testID={TestIDs.archive.search}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -31,6 +33,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search' }: Pro
       {value.length > 0 && (
         <Animated.View entering={fadeIn(Duration.fast)} exiting={fadeOut(Duration.fast)}>
           <Pressable
+            testID={TestIDs.archive.searchClear}
             onPress={() => onChangeText('')}
             hitSlop={10}
             accessibilityRole="button"

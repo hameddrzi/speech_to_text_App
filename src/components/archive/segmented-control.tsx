@@ -8,7 +8,7 @@ import { Spring } from '@/constants/motion';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 type Props<T extends string> = {
-  options: readonly { value: T; label: string }[];
+  options: readonly { value: T; label: string; testID?: string }[];
   value: T;
   onChange: (value: T) => void;
 };
@@ -52,6 +52,7 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
           return (
             <Pressable
               key={o.value}
+              testID={o.testID}
               style={styles.item}
               accessibilityRole="tab"
               accessibilityState={{ selected }}

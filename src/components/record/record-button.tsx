@@ -22,6 +22,7 @@ type Props = {
   disabled?: boolean;
   size?: number;
   accessibilityLabel: string;
+  testID?: string;
 };
 
 /** Stop-square side as a fraction of the circle, and its visual corner radius. */
@@ -33,7 +34,15 @@ const HALO_PERIOD = 1600;
  * The Voice Memos record button: white ring around a red circle that morphs into a rounded square.
  * The morph is a scale + corner-radius change on a fixed-size view, so it never triggers layout.
  */
-export function RecordButton({ recording, live = false, onPress, disabled, size = 78, accessibilityLabel }: Props) {
+export function RecordButton({
+  recording,
+  live = false,
+  onPress,
+  disabled,
+  size = 78,
+  accessibilityLabel,
+  testID,
+}: Props) {
   const inner = size - 18;
   const morph = useSharedValue(recording ? 1 : 0);
   const pressed = useSharedValue(1);
@@ -81,6 +90,7 @@ export function RecordButton({ recording, live = false, onPress, disabled, size 
         style={[styles.halo, { width: size, height: size, borderRadius: size / 2 }, haloStyle]}
       />
       <Pressable
+        testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ disabled }}

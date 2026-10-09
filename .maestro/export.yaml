@@ -1,0 +1,140 @@
+# Export sheet: Markdown and PDF save (Android: into a folder picked once through the system
+# picker), "Share file…" opens the system share sheet, Done closes the sheet.
+#
+# Android's folder picker belongs to the phone's Files app and is OEM-specific; see
+# subflows/android-saf-picker.yaml. If it can't be automated on a phone, pick a folder by hand
+# when it appears: the flow waits up to 60 s for the "Saved" banner.
+#
+# iOS has no folder step: saving opens the share sheet ("Save to Files"), which is checked
+# for appearing and then dismissed.
+appId: com.voicetranscript.app
+name: export
+tags:
+  - export
+---
+- runFlow: subflows/launch-clean.yaml
+- runFlow:
+    file: subflows/record-take.yaml
+    env:
+      TIMER_REGEX: '00:0[3-9],[0-9]{2}|Elapsed [3-9] seconds'
+- tapOn:
+    id: "saved-toast-view"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- tapOn:
+    id: "recording-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "detail-export"
+    timeout: 5000
+
+# ── Open the sheet ──
+- tapOn:
+    id: "detail-export"
+- extendedWaitUntil:
+    visible:
+      id: "export-sheet"
+    timeout: 5000
+- assertVisible: "Export Transcript"
+- assertVisible:
+    id: "export-option-pdf"
+- assertVisible:
+    id: "export-option-md"
+- assertVisible:
+    id: "export-done"
+- takeScreenshot: export_01_sheet
+
+# ── Android: save to folder ──
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      # Markdown. First save of a fresh install opens the folder picker.
+      - tapOn:
+          id: "export-option-md"
+      - runFlow: subflows/android-saf-picker.yaml
+      - extendedWaitUntil:
+          visible:
+            id: "export-success"
+          timeout: 60000
+      - assertVisible: "Saved .*\\.md.*"
+      - takeScreenshot: export_02_markdown_saved
+
+      # PDF. The folder is remembered now, so no picker.
+      - tapOn:
+          id: "export-option-pdf"
+      - extendedWaitUntil:
+          visible: "Saved .*\\.pdf.*"
+          timeout: 60000
+      - assertVisible:
+          id: "export-success"
+      - takeScreenshot: export_03_pdf_saved
+
+      # Share file… opens the system share sheet; back closes it and the export sheet stays.
+      - tapOn:
+          id: "export-share-md"
+      - waitForAnimationToEnd:
+          timeout: 4000
+      - takeScreenshot: export_04_share_sheet_md
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "export-sheet"
+          timeout: 5000
+      - tapOn:
+          id: "export-share-pdf"
+      - waitForAnimationToEnd:
+          timeout: 6000
+      - takeScreenshot: export_05_share_sheet_pdf
+      - back
+      - extendedWaitUntil:
+          visible:
+            id: "export-sheet"
+          timeout: 5000
+      - assertNotVisible:
+          id: "export-error"
+
+# ── iOS: save opens the share sheet ──
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn:
+          id: "export-option-md"
+      - waitForAnimationToEnd:
+          timeout: 4000
+      - takeScreenshot: export_02_ios_share_sheet_md
+      - tapOn:
+          text: "Close"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "export-sheet"
+          timeout: 5000
+      - tapOn:
+          id: "export-option-pdf"
+      - waitForAnimationToEnd:
+          timeout: 6000
+      - takeScreenshot: export_03_ios_share_sheet_pdf
+      - tapOn:
+          text: "Close"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "export-sheet"
+          timeout: 5000
+      - assertNotVisible:
+          id: "export-error"
+
+# ── Done closes the sheet ──
+- tapOn:
+    id: "export-done"
+- extendedWaitUntil:
+    notVisible:
+      id: "export-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "detail-play-pause"
+- takeScreenshot: export_06_closed

@@ -15,6 +15,7 @@ import { haptic } from '@/utils/haptics';
 import { Shimmer } from '@/components/archive/shimmer';
 import { FadeSwap } from '@/components/fade-swap';
 import { Duration, fadeIn, Timing } from '@/constants/motion';
+import { TestIDs, transcriptSegment } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording, type TranscriptSegment } from '@/data/recordings';
 import { useSelectedModelReady } from '@/stt/use-model-download';
@@ -47,7 +48,9 @@ const Segment = memo(function Segment({
   active,
   onPress,
   onLayoutY,
+  testID,
 }: {
+  testID: string;
   segment: TranscriptSegment;
   active: boolean;
   onPress: (start: number) => void;
@@ -72,6 +75,7 @@ const Segment = memo(function Segment({
 
   return (
     <Pressable
+      testID={testID}
       onPress={() => onPress(segment.start)}
       onLayout={(e) => onLayoutY(e.nativeEvent.layout.y)}
       accessibilityRole="button"
@@ -122,6 +126,7 @@ function Notice({
       <Text style={styles.noticeTitle}>{title}</Text>
       <Text style={styles.noticeBody}>{body}</Text>
       <Pressable
+        testID={TestIDs.detail.noticeAction}
         onPress={() => {
           haptic.light();
           onAction();
@@ -182,6 +187,7 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
           <View style={styles.flex} />
           {done && (
             <Pressable
+              testID={TestIDs.detail.copyText}
               onPress={copy}
               hitSlop={8}
               accessibilityRole="button"
@@ -209,6 +215,7 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
             {transcript.map((s, i) => (
               <Segment
                 key={`${s.start}-${i}`}
+                testID={transcriptSegment(i)}
                 segment={s}
                 active={i === active}
                 onPress={onSeek}
@@ -233,7 +240,7 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
         )}
 
         {transcriptStatus === 'processing' && !waitingForModel && (
-          <View>
+          <View testID={TestIDs.detail.processing}>
             <View style={styles.processingRow}>
               <ActivityIndicator size="small" color={Colors.labelSecondary} />
               <Text style={styles.processingText}>

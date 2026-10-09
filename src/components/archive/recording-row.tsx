@@ -18,6 +18,7 @@ import { introProgress } from '@/components/archive/list-intro';
 import { StatusChip } from '@/components/archive/status-chip';
 import { Glass } from '@/components/glass';
 import { fadeOut, listLayout, PressScale, Spring, Timing, Travel, useMotion } from '@/constants/motion';
+import { recordingRow, TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useSelectedModelReady } from '@/stt/use-model-download';
@@ -48,6 +49,7 @@ function SwipeAction({
   color,
   label,
   onPress,
+  testID,
 }: {
   progress: SharedValue<number>;
   index: number;
@@ -55,6 +57,7 @@ function SwipeAction({
   color: string;
   label: string;
   onPress: () => void;
+  testID: string;
 }) {
   const style = useAnimatedStyle(() => {
     // Staggered reveal: each outer action pops in slightly after the inner one; the last one
@@ -65,6 +68,7 @@ function SwipeAction({
   return (
     <Animated.View style={style}>
       <Pressable
+        testID={testID}
         onPress={onPress}
         accessibilityRole="button"
         accessibilityLabel={label}
@@ -159,6 +163,7 @@ export const RecordingRow = memo(function RecordingRow({
               color={Colors.warning}
               label={recording.favorite ? 'Remove from favorites' : 'Add to favorites'}
               onPress={handleFavorite}
+              testID={TestIDs.archive.rowFavorite}
             />
             <SwipeAction
               progress={progress}
@@ -167,6 +172,7 @@ export const RecordingRow = memo(function RecordingRow({
               color={Colors.tint}
               label="Share"
               onPress={handleShare}
+              testID={TestIDs.archive.rowShare}
             />
             <SwipeAction
               progress={progress}
@@ -175,12 +181,14 @@ export const RecordingRow = memo(function RecordingRow({
               color={Colors.record}
               label="Delete"
               onPress={handleDelete}
+              testID={TestIDs.archive.rowDelete}
             />
           </View>
         )}>
         <Animated.View style={pressStyle}>
           <Glass strong elevated={false} radius={Radius.lg} style={styles.card}>
             <Pressable
+              testID={recordingRow(id)}
               onPress={() => {
                 haptic.selection();
                 onOpen(id);

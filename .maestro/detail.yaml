@@ -1,0 +1,169 @@
+# Recording detail: play/pause, ±15 s skip, speed 1× → 1.5× → 2× → 1×, favorite, rename,
+# copy text (only when a transcript exists), and delete from the header.
+appId: com.voicetranscript.app
+name: detail
+tags:
+  - detail
+---
+- runFlow: subflows/launch-clean.yaml
+- runFlow:
+    file: subflows/record-take.yaml
+    env:
+      TIMER_REGEX: '00:0[6-9],[0-9]{2}|Elapsed [6-9] seconds'
+- tapOn:
+    id: "saved-toast-view"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- tapOn:
+    id: "recording-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "detail-play-pause"
+    timeout: 5000
+- assertVisible:
+    id: "detail-back"
+- assertVisible:
+    id: "detail-export"
+- assertVisible:
+    id: "detail-share"
+- assertVisible:
+    id: "detail-delete"
+- assertVisible:
+    id: "detail-scrubber"
+- assertVisible:
+    id: "detail-position"
+    text: "0:00"
+- takeScreenshot: detail_01_opened
+
+# ── Play / pause ──
+- tapOn:
+    id: "detail-play-pause"
+- assertVisible:
+    id: "detail-play-pause"
+    text: "Pause"
+- extendedWaitUntil:
+    visible:
+      id: "detail-position"
+      text: '0:0[2-9]'
+    timeout: 10000
+- takeScreenshot: detail_02_playing
+- tapOn:
+    id: "detail-play-pause"
+- assertVisible:
+    id: "detail-play-pause"
+    text: "Play"
+
+# ── Skip ──
+# Back 15 s clamps to the start.
+- tapOn:
+    id: "detail-skip-back"
+- extendedWaitUntil:
+    visible:
+      id: "detail-position"
+      text: "0:00"
+    timeout: 3000
+# Forward 15 s on a ~6 s take clamps to the end (remaining time reaches -0:00).
+- tapOn:
+    id: "detail-skip-forward"
+- extendedWaitUntil:
+    visible:
+      id: "detail-remaining"
+      text: "-0:00"
+    timeout: 3000
+- takeScreenshot: detail_03_skipped_to_end
+- tapOn:
+    id: "detail-skip-back"
+- extendedWaitUntil:
+    visible:
+      id: "detail-position"
+      text: "0:00"
+    timeout: 3000
+
+# ── Speed pill (label: "Playback speed <rate>x. Double tap to change") ──
+- assertVisible:
+    id: "detail-speed"
+    text: 'Playback speed 1x.*|1×'
+- tapOn:
+    id: "detail-speed"
+- assertVisible:
+    id: "detail-speed"
+    text: 'Playback speed 1\.5x.*|1\.5×'
+- takeScreenshot: detail_04_speed_1_5x
+- tapOn:
+    id: "detail-speed"
+- assertVisible:
+    id: "detail-speed"
+    text: 'Playback speed 2x.*|2×'
+- tapOn:
+    id: "detail-speed"
+- assertVisible:
+    id: "detail-speed"
+    text: 'Playback speed 1x.*|1×'
+
+# ── Favorite ──
+- tapOn:
+    id: "detail-favorite"
+- assertVisible:
+    id: "detail-favorite"
+    text: "Remove from favorites"
+- tapOn:
+    id: "detail-favorite"
+- assertVisible:
+    id: "detail-favorite"
+    text: "Add to favorites"
+
+# ── Rename ──
+- tapOn:
+    id: "detail-title"
+- extendedWaitUntil:
+    visible:
+      id: "detail-title-input"
+    timeout: 3000
+- eraseText: 40
+- inputText: "E2E Renamed"
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "detail-title"
+    timeout: 3000
+- assertVisible: "E2E Renamed.*"
+- takeScreenshot: detail_05_renamed
+
+# ── Copy text (only when the take has a transcript, e.g. a Tiny model is installed) ──
+- runFlow:
+    when:
+      visible:
+        id: "transcript-copy"
+    commands:
+      - tapOn:
+          id: "transcript-copy"
+      - assertVisible:
+          id: "transcript-copy"
+          text: "Copied"
+      - takeScreenshot: detail_06_copied
+
+# The archive shows the new title.
+- tapOn:
+    id: "detail-back"
+- extendedWaitUntil:
+    visible: "E2E Renamed.*"
+    timeout: 5000
+- takeScreenshot: detail_07_archive_renamed
+
+# ── Delete from the detail header ──
+- tapOn:
+    id: "recording-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "detail-delete"
+    timeout: 5000
+- tapOn:
+    id: "detail-delete"
+- runFlow: subflows/confirm-alert.yaml
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- takeScreenshot: detail_08_deleted

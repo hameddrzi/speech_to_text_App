@@ -1,0 +1,16 @@
+# Launches Voice from a clean slate (no recordings, default settings, no speech model)
+# and waits until the Record tab is interactive.
+#
+# Maestro grants every runtime permission on launch by default, so the microphone
+# dialog normally never shows. Flows that test the dialog pass their own `permissions`.
+appId: com.voicetranscript.app
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: "tab-record"
+    timeout: 30000
+- assertVisible:
+    id: "record-button"

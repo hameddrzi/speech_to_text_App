@@ -1,0 +1,19 @@
+# Taps "Cancel" on a React Native Alert.alert([Cancel, <Confirm>]).
+# Android: the second-to-last button maps to the negative button, android:id/button2.
+appId: com.voicetranscript.app
+---
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          visible:
+            id: "android:id/button2"
+          timeout: 5000
+      - tapOn:
+          id: "android:id/button2"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - tapOn: "Cancel"

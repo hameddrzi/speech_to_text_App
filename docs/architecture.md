@@ -175,4 +175,6 @@ why there is no transcript instead of an empty page.
 - Routes only in `src/app/`; everything else lives outside it.
 - Path alias `@/` → `src/`.
 - Colors, type, spacing and radii come from `src/constants/theme.ts`; see [design-system.md](design-system.md).
+- Interactive elements carry a `testID` from `src/constants/test-ids.ts` for the Maestro E2E flows;
+  see [testing.md](testing.md).
 - Run `npx tsc --noEmit` and `npx expo lint` before committing.

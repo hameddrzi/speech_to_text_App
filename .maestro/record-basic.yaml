@@ -1,0 +1,99 @@
+# Record → pause → resume → stop, then check the saved duration on the detail screen.
+#
+# Regression guard for the pause/resume bug where audio captured after resume was lost:
+# the take is ~5 s + ~3 s of real recording (the 2 s pause doesn't count), and the duration
+# on the detail screen comes from the WAV file actually written, so it must be >= 0:07.
+appId: com.voicetranscript.app
+name: record-basic
+tags:
+  - record
+  - quick
+---
+- runFlow: subflows/launch-clean.yaml
+
+- tapOn:
+    id: "record-button"
+- runFlow: subflows/allow-mic-permission.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Recording.*"
+    timeout: 10000
+
+# ~5 s of audio. The timer reads "mm:ss,cc"; iOS exposes its label "Elapsed N seconds".
+- extendedWaitUntil:
+    visible:
+      id: "record-timer"
+      text: '00:0[5-9],[0-9]{2}|Elapsed [5-9] seconds'
+    timeout: 20000
+- takeScreenshot: record-basic_01_recording_5s
+
+- tapOn:
+    id: "record-pause-resume"
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Paused"
+    timeout: 5000
+- takeScreenshot: record-basic_02_paused
+
+# Stay paused ~2 s (waits for something that never appears; the timeout is the delay).
+- extendedWaitUntil:
+    visible: "__e2e_wait__"
+    timeout: 2000
+    optional: true
+# The timer must be frozen while paused (still at 5-6 s, never 8+).
+- assertVisible:
+    id: "record-timer"
+    text: '00:0[5-7],[0-9]{2}|Elapsed [5-7] seconds'
+
+- tapOn:
+    id: "record-pause-resume"
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Recording.*"
+    timeout: 5000
+
+# ~3 s more after resume (timer reaches 8 s).
+- extendedWaitUntil:
+    visible:
+      id: "record-timer"
+      text: '00:(0[8-9]|[1-5][0-9]),[0-9]{2}|Elapsed ([8-9]|[1-5][0-9]) seconds'
+    timeout: 20000
+- takeScreenshot: record-basic_03_resumed_8s
+
+# Stop and save.
+- tapOn:
+    id: "record-button"
+- extendedWaitUntil:
+    visible:
+      id: "saved-toast"
+    timeout: 15000
+- assertVisible: "Saved to Archive"
+- takeScreenshot: record-basic_04_saved_toast
+
+- tapOn:
+    id: "saved-toast-view"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- assertVisible: "New Recording.*"
+- takeScreenshot: record-basic_05_archive_row
+
+- tapOn:
+    id: "recording-row-.*"
+- extendedWaitUntil:
+    visible:
+      id: "detail-meta"
+    timeout: 5000
+# "<time> · 0:08". Anything from 0:07 up passes; 0:05 means the audio after resume was lost.
+- assertVisible:
+    id: "detail-meta"
+    text: '.* · ([1-9]:[0-9]{2}|0:(0[7-9]|[1-5][0-9]))'
+# Same check on the player's remaining time ("-0:08" at position 0).
+- assertVisible:
+    id: "detail-remaining"
+    text: '-([1-9]:[0-9]{2}|0:(0[7-9]|[1-5][0-9]))'
+- takeScreenshot: record-basic_06_detail_duration
