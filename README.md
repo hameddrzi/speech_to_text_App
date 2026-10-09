@@ -75,17 +75,73 @@ is enough for JavaScript changes.
 2. Go to **Record** and tap the red button.
 3. Stop. The recording appears in **Archive** and is transcribed in the background.
 
-### Build a standalone APK (no computer needed to run it)
+### Build for distribution
+
+A release build contains the JavaScript bundle, so it runs without Metro or a computer.
+
+> **Pick one signing key now and keep it.** Android only installs an update over an existing
+> install when both are signed with the same key. Switching keys (debug → your key, local → EAS,
+> a lost keystore…) means uninstalling the old app first, and **uninstalling deletes all
+> recordings and transcripts on the phone**. Export or share what you want to keep before you
+> uninstall, and back up the keystore and its password.
+
+#### a) EAS Build (recommended)
+
+Builds in the cloud and creates and stores a real upload key for you. Profiles are in
+[`eas.json`](eas.json). You need a free [Expo account](https://expo.dev/signup).
 
 ```bash
-cd android
-./gradlew app:assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
-adb install -r app/build/outputs/apk/release/app-release.apk
+npx eas-cli@latest login
+npx eas-cli@latest build -p android --profile preview      # APK for sideloading
 ```
 
-The release APK is about 54 MB and contains the JavaScript bundle, so it runs without Metro.
-It is currently signed with the debug keystore, which is fine for personal installs but
-[not for the Play Store](https://reactnative.dev/docs/signed-apk-android).
+- The first build asks to link the project (`eas init` adds `extra.eas.projectId` to `app.json`;
+  commit that) and offers to **generate a new Android keystore**: answer yes. EAS keeps it, so every
+  later build is signed with the same key. Download a backup with `npx eas-cli@latest credentials -p android`.
+- **`preview`** builds one APK with all four ABIs (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`), so it
+  installs on 32-bit phones (older or low-end Samsung A-series, Android Go), 64-bit phones, x86_64
+  emulators and Chromebooks. Open the link EAS prints on the phone, or `adb install -r <file>.apk`.
+- **`production`** builds an Android App Bundle (`.aab`) for Google Play, which delivers only the
+  ABI each phone needs. The version code is managed by EAS and incremented automatically.
+- **`development`** builds a development client APK (same as `npx expo run:android`, but in the cloud).
+
+#### b) Local build
+
+Needs the Android toolchain from [Requirements](#requirements).
+
+1. **Once:** create your upload key and tell Gradle where it is:
+
+   ```bash
+   bash scripts/create-upload-keystore.sh   # writes ~/.android-keys/voice-upload.keystore
+   ```
+
+   Put the four `VOICE_UPLOAD_*` lines it prints into `~/.gradle/gradle.properties`
+   (your home folder, **never the repository**; environment variables with the same names also work).
+   The config plugin [`plugins/with-release-signing.js`](plugins/with-release-signing.js) wires them
+   into the generated `android/app/build.gradle` on every `expo prebuild`. Without them, release
+   builds fall back to the debug keystore, which is only fine for testing on your own phone.
+
+2. **Build an APK for all phones:**
+
+   ```bash
+   npx expo prebuild -p android      # regenerates android/ (applies the signing plugin)
+   cd android
+   ./gradlew app:assembleRelease --no-daemon
+   adb install -r app/build/outputs/apk/release/app-release.apk
+   ```
+
+   Without `-PreactNativeArchitectures` the APK contains all four ABIs, like the EAS preview build.
+   To make it smaller while still covering every real phone, leave out the emulator ABIs:
+   `./gradlew app:assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon`.
+   Do **not** build `arm64-v8a` only: that APK fails to install on 32-bit phones.
+
+The universal APK is larger than an `arm64-v8a`-only one (about 54 MB) because it carries
+whisper.cpp and React Native's native libraries once per ABI. Per-ABI split APKs are not set up;
+for store distribution use the `production` App Bundle, which Google Play splits per device.
+
+To use the same key locally and on EAS, either upload your keystore with
+`npx eas-cli@latest credentials -p android` before the first EAS build, or download the one EAS
+generated and point `VOICE_UPLOAD_*` at it.
 
 `--no-daemon` makes Gradle exit after the build instead of staying in memory.
 
@@ -180,6 +236,10 @@ The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo ru
 - While a long recording is being transcribed in the background, the live preview of a new recording
   stays empty until that job finishes (the engine runs one job at a time).
 - Speaker labels (who said what) are not supported.
+- **No cloud backup of recordings.** Android Auto Backup is enabled (Expo's default), but it backs up
+  at most 25 MB per app and the app's files (speech models, WAV recordings) are far larger, so in
+  practice nothing is backed up. Backup rules that include only the small JSON metadata are a
+  possible follow-up; until then, uninstalling the app loses its recordings.
 
 ---
 

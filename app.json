@@ -44,7 +44,8 @@
           "microphonePermission": "Voice needs the microphone to record your voice notes. Audio is transcribed on this device and never leaves your phone."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "./plugins/with-release-signing.js"
     ],
     "experiments": {
       "typedRoutes": true,
