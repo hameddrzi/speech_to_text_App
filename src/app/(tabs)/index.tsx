@@ -197,22 +197,27 @@ export default function RecordScreen() {
           />
         </View>
 
-        {/* Transcript or permission prompt */}
-        {showPermissionCard ? (
-          <PermissionCard
-            blocked={permission === 'blocked'}
-            onAllow={onRecordPress}
-            onOpenSettings={session.openSettings}
-            onDismiss={session.dismissPermission}
-          />
-        ) : (
-          <LiveTranscriptCard
-            text={liveTranscript}
-            hint={transcriptHint}
-            active={phase === 'recording'}
-            height={compact ? 38 : 64}
-          />
-        )}
+        {/* Transcript or permission prompt. The "Saved" toast appears over this card, which is idle after a save. */}
+        <View>
+          {showPermissionCard ? (
+            <PermissionCard
+              blocked={permission === 'blocked'}
+              onAllow={onRecordPress}
+              onOpenSettings={session.openSettings}
+              onDismiss={session.dismissPermission}
+            />
+          ) : (
+            <LiveTranscriptCard
+              text={liveTranscript}
+              hint={transcriptHint}
+              active={phase === 'recording'}
+              height={compact ? 38 : 64}
+            />
+          )}
+          {toast ? (
+            <SavedToast key={toast.id} title={toast.title} onView={viewArchive} onDismiss={dismissToast} />
+          ) : null}
+        </View>
 
         {/* Controls */}
         <Glass radius={Radius.xl} intensity={55} style={styles.controls}>
@@ -244,15 +249,6 @@ export default function RecordScreen() {
         </Glass>
       </View>
 
-      {toast ? (
-        <SavedToast
-          key={toast.id}
-          title={toast.title}
-          top={insets.top + Spacing.sm}
-          onView={viewArchive}
-          onDismiss={dismissToast}
-        />
-      ) : null}
     </View>
   );
 }
