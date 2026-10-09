@@ -1,0 +1,33 @@
+# Handles Android's "choose a folder" picker (Storage Access Framework). The export sheet opens
+# it the first time it saves a file; the choice is remembered until the app's data is cleared.
+#
+# This screen belongs to the phone's Files app and differs between vendors and Android versions:
+# - Android 11+ refuses the storage root and the Download root, so we step into "Documents".
+# - The confirm button reads "Use this folder" / "USE THIS FOLDER" (AOSP, Pixel, Samsung) and is
+#   followed by an "Allow" / "ALLOW" access prompt.
+# If a phone's picker looks different, pick a folder by hand while the flow waits (export.yaml
+# allows 60 s for the save to finish), then note the model in the device matrix.
+appId: com.voicetranscript.app
+---
+- extendedWaitUntil:
+    visible: "Use this folder|USE THIS FOLDER"
+    timeout: 8000
+    optional: true
+- takeScreenshot: export_saf_picker
+- runFlow:
+    when:
+      visible: "Use this folder|USE THIS FOLDER"
+    commands:
+      - runFlow:
+          when:
+            visible: "Documents"
+          commands:
+            - tapOn: "Documents"
+            - waitForAnimationToEnd:
+                timeout: 2000
+      - tapOn: "Use this folder|USE THIS FOLDER"
+- runFlow:
+    when:
+      visible: "Allow|ALLOW"
+    commands:
+      - tapOn: "Allow|ALLOW"

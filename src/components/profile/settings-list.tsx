@@ -74,6 +74,7 @@ type RowProps = {
   destructive?: boolean;
   accessibilityHint?: string;
   children?: ReactNode;
+  testID?: string;
 };
 
 /** One row: icon tile · title/subtitle · value · chevron | accessory. Press = gray highlight + tiny scale. */
@@ -89,6 +90,7 @@ export function SettingsRow({
   destructive,
   accessibilityHint,
   children,
+  testID,
 }: RowProps) {
   const pressed = useSharedValue(0);
   const showChevron = chevron ?? (!!onPress && !accessory);
@@ -132,6 +134,7 @@ export function SettingsRow({
   if (!onPress) {
     return (
       <View
+        testID={testID}
         accessible={!accessory}
         accessibilityLabel={value ? `${title}, ${value}` : title}
         accessibilityHint={accessibilityHint}>
@@ -142,6 +145,7 @@ export function SettingsRow({
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={value ? `${title}, ${value}` : title}
       accessibilityHint={accessibilityHint}

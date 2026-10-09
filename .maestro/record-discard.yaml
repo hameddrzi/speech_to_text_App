@@ -1,0 +1,54 @@
+# Discarding a take: Cancel keeps recording, Delete throws the take away and nothing is saved.
+appId: com.voicetranscript.app
+name: record-discard
+tags:
+  - record
+  - quick
+---
+- runFlow: subflows/launch-clean.yaml
+
+- tapOn:
+    id: "record-button"
+- runFlow: subflows/allow-mic-permission.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-timer"
+      text: '00:0[3-9],[0-9]{2}|Elapsed [3-9] seconds'
+    timeout: 20000
+- takeScreenshot: record-discard_01_recording
+
+# Discard → Cancel: still recording.
+- tapOn:
+    id: "record-discard"
+- takeScreenshot: record-discard_02_confirm
+- runFlow: subflows/cancel-alert.yaml
+- assertVisible:
+    id: "record-status"
+    text: "Recording.*"
+
+# Discard → Delete: back to idle, timer reset, no toast.
+- tapOn:
+    id: "record-discard"
+- runFlow: subflows/confirm-alert.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Ready to record"
+    timeout: 10000
+- assertVisible:
+    id: "record-timer"
+    text: '00:00,00|Elapsed 0 seconds'
+- assertNotVisible:
+    id: "saved-toast"
+- takeScreenshot: record-discard_03_idle
+
+# Nothing reached the archive.
+- tapOn:
+    id: "tab-archive"
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- assertNotVisible:
+    id: "recording-row-.*"
+- takeScreenshot: record-discard_04_archive_empty

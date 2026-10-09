@@ -1,0 +1,48 @@
+# Accepts the system microphone dialog if it is showing. Safe to run when it isn't.
+#
+# Android 11-14 (permissioncontroller): "While using the app" / "Only this time" / "Don't allow".
+# Older Android and some OEM skins: "Allow" / "ALLOW". iOS: "Allow" or "OK".
+# Every branch is conditional (runFlow + when), so a missing dialog costs no lookup timeout.
+appId: com.voicetranscript.app
+---
+# The dialog appears a moment after the record tap; give it up to 3 s (a warning, not a failure).
+- extendedWaitUntil:
+    visible: "While using the app|WHILE USING THE APP|Only this time|ONLY THIS TIME|Allow|ALLOW|OK"
+    timeout: 3000
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "com.android.permissioncontroller:id/permission_allow_foreground_only_button"
+    commands:
+      - takeScreenshot: permission_dialog
+      - tapOn:
+          id: "com.android.permissioncontroller:id/permission_allow_foreground_only_button"
+- runFlow:
+    when:
+      visible: "While using the app|WHILE USING THE APP"
+    commands:
+      - tapOn: "While using the app|WHILE USING THE APP"
+- runFlow:
+    when:
+      visible: "Only this time|ONLY THIS TIME"
+    commands:
+      - tapOn: "Only this time|ONLY THIS TIME"
+- runFlow:
+    when:
+      visible:
+        id: "com.android.permissioncontroller:id/permission_allow_button"
+    commands:
+      - tapOn:
+          id: "com.android.permissioncontroller:id/permission_allow_button"
+- runFlow:
+    when:
+      visible: "Allow|ALLOW"
+    commands:
+      - tapOn: "Allow|ALLOW"
+- runFlow:
+    when:
+      platform: iOS
+      visible: "OK"
+    commands:
+      - tapOn: "OK"

@@ -1,0 +1,95 @@
+# Full on-device pipeline: record ~10 s of speech → background Whisper (Tiny) → transcript.
+#
+# NEEDS SOUND. Maestro can't speak. While the flow shows "Recording" (about 10 s after it taps
+# the record button), the tester must either:
+#   - say a known sentence clearly, ~20 cm from the phone, e.g.
+#     "The quick brown fox jumps over the lazy dog. Testing one two three.", or
+#   - play a speech sample from a second device/laptop speaker next to the phone.
+# Silence is transcribed as "No speech detected" and this flow then fails on purpose.
+#
+# Optional word check: pass -e EXPECTED_WORD=fox to also assert that word appears (case-insensitive).
+#
+# Does NOT clear app data, so a Tiny model left by model-download.yaml is reused; if none is
+# installed it is downloaded first (needs network). Transcription itself is offline.
+appId: com.voicetranscript.app
+name: transcribe-e2e
+tags:
+  - slow
+env:
+  EXPECTED_WORD: ""
+---
+- launchApp:
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: "tab-record"
+    timeout: 30000
+
+- runFlow: subflows/ensure-tiny-model.yaml
+- takeScreenshot: transcribe-e2e_01_model_ready
+
+# Earlier recordings are kept; the new take is the first row (the archive is newest-first).
+- tapOn:
+    id: "tab-record"
+- tapOn:
+    id: "record-button"
+- runFlow: subflows/allow-mic-permission.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Recording.*"
+    timeout: 10000
+# >>> SPEAK NOW (or play the sample) <<<
+- extendedWaitUntil:
+    visible:
+      id: "record-timer"
+      text: '00:(1[0-9]|[2-5][0-9]),[0-9]{2}|Elapsed (1[0-9]|[2-5][0-9]) seconds'
+    timeout: 40000
+- takeScreenshot: transcribe-e2e_02_recording_live_preview
+- tapOn:
+    id: "record-button"
+- extendedWaitUntil:
+    visible:
+      id: "saved-toast"
+    timeout: 15000
+- tapOn:
+    id: "saved-toast-view"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- takeScreenshot: transcribe-e2e_03_archive_transcribing
+
+# Android: the new row's chip goes "Transcribing" → "Transcript" when the background job is done.
+# Older recordings may already show "Transcript", so wait for "Transcribing" to disappear first.
+# (iOS hides the chip inside the row's accessibility element, so iOS waits on the detail screen.)
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - extendedWaitUntil:
+          notVisible:
+            id: "status-chip-processing"
+          timeout: 180000
+      - assertVisible:
+          id: "status-chip-done"
+      - takeScreenshot: transcribe-e2e_04_archive_transcribed
+
+# The newest recording is the first row.
+- tapOn:
+    id: "recording-row-.*"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "transcript-segment-0"
+    timeout: 180000
+- assertVisible:
+    id: "transcript-copy"
+- takeScreenshot: transcribe-e2e_05_transcript
+
+- runFlow:
+    when:
+      true: ${EXPECTED_WORD != ''}
+    commands:
+      - assertVisible:
+          text: '(?i).*\b${EXPECTED_WORD}\b.*'

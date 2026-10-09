@@ -24,13 +24,14 @@ type Props = {
   onValueChange: (next: boolean) => void;
   accessibilityLabel: string;
   disabled?: boolean;
+  testID?: string;
 };
 
 /**
  * iOS-style switch drawn in JS so it looks identical on iOS, Android and web:
  * white knob with soft shadow, green track when on, knob stretches while pressed like UIKit.
  */
-export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled }: Props) {
+export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled, testID }: Props) {
   const progress = useSharedValue(value ? 1 : 0);
   const pressed = useSharedValue(0);
 
@@ -54,6 +55,7 @@ export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="switch"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: value, disabled }}

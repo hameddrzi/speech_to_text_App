@@ -30,6 +30,7 @@ type Props = {
   accessibilityLabel?: string;
   accessibilityValueText?: string;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
@@ -99,6 +100,7 @@ export const WaveformScrubber = memo(function WaveformScrubber({
   accessibilityLabel = 'Playback position',
   accessibilityValueText,
   style,
+  testID,
 }: Props) {
   const [width, setWidth] = useState(0);
   const shown = useSharedValue(clamp01(progress));
@@ -167,6 +169,7 @@ export const WaveformScrubber = memo(function WaveformScrubber({
   return (
     <GestureDetector gesture={gesture}>
       <View
+        testID={testID}
         onLayout={onLayout}
         style={[{ height: height + verticalPad * 2, justifyContent: 'center' }, style]}
         accessible

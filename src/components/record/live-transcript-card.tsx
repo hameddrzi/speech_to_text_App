@@ -14,6 +14,7 @@ import Animated, {
 import { FadeSwap } from '@/components/fade-swap';
 import { Glass } from '@/components/glass';
 import { Duration, Easings, fadeIn, fadeOut, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -90,7 +91,7 @@ export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
     : (hint ?? 'Your words will appear here live while you record.');
 
   return (
-    <Glass radius={Radius.lg} intensity={45} style={styles.card}>
+    <Glass testID={TestIDs.record.liveTranscript} radius={Radius.lg} intensity={45} style={styles.card}>
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Ionicons name="text" size={14} color={active ? Colors.record : Colors.labelSecondary} />

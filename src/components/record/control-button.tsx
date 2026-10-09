@@ -15,13 +15,22 @@ type Props = {
   disabled?: boolean;
   color?: string;
   size?: number;
+  testID?: string;
 };
 
 /**
  * Round frosted-glass secondary control (pause / resume / discard). It rests dimmed and slightly smaller
  * while unavailable, and eases up to full size when recording starts.
  */
-export function ControlButton({ icon, accessibilityLabel, onPress, disabled, color = Colors.label, size = 52 }: Props) {
+export function ControlButton({
+  icon,
+  accessibilityLabel,
+  onPress,
+  disabled,
+  color = Colors.label,
+  size = 52,
+  testID,
+}: Props) {
   const visible = useSharedValue(disabled ? 0 : 1);
   const pressed = useSharedValue(1);
 
@@ -36,6 +45,7 @@ export function ControlButton({ icon, accessibilityLabel, onPress, disabled, col
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled }}

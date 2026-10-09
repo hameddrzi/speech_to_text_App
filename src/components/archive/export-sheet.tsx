@@ -6,6 +6,7 @@ import Animated from 'react-native-reanimated';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { Duration, fadeIn } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import {
@@ -61,6 +62,11 @@ const FORMATS: FormatOption[] = [
 ];
 
 const FADE = fadeIn(Duration.base);
+
+const OPTION_IDS: Record<ExportFormat, { option: string; share: string }> = {
+  pdf: { option: TestIDs.exportSheet.optionPdf, share: TestIDs.exportSheet.sharePdf },
+  md: { option: TestIDs.exportSheet.optionMd, share: TestIDs.exportSheet.shareMd },
+};
 
 function successText(o: Exclude<ExportOutcome, { kind: 'cancelled' | 'shared' }>): string {
   switch (o.kind) {
@@ -130,13 +136,14 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
 
   return (
     <BottomSheet visible={visible} onClose={close}>
-      <Glass strong intensity={80} radius={Radius.xl} style={styles.sheet}>
+      <Glass testID={TestIDs.exportSheet.sheet} strong intensity={80} radius={Radius.xl} style={styles.sheet}>
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
           <Text style={styles.title} accessibilityRole="header">
             Export Transcript
           </Text>
           <Pressable
+            testID={TestIDs.exportSheet.done}
             onPress={close}
             disabled={busy}
             hitSlop={10}
@@ -158,6 +165,7 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
             return (
               <Pressable
                 key={o.format}
+                testID={OPTION_IDS[o.format].option}
                 onPress={() => run(o.format, 'save')}
                 disabled={busy}
                 accessibilityRole="button"
@@ -180,6 +188,7 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
                   <ActivityIndicator color={Colors.labelSecondary} style={styles.trailing} />
                 ) : EXPORT_CAPABILITIES.saveToFolder && EXPORT_CAPABILITIES.share ? (
                   <Pressable
+                    testID={OPTION_IDS[o.format].share}
                     onPress={() => run(o.format, 'share')}
                     disabled={busy}
                     hitSlop={8}
@@ -197,13 +206,21 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
         </View>
 
         {status.kind === 'done' && (
-          <Animated.View entering={FADE} style={[styles.banner, styles.bannerSuccess]} accessibilityLiveRegion="polite">
+          <Animated.View
+            testID={TestIDs.exportSheet.success}
+            entering={FADE}
+            style={[styles.banner, styles.bannerSuccess]}
+            accessibilityLiveRegion="polite">
             <Ionicons name="checkmark-circle" size={18} color={Colors.successText} />
             <Text style={[styles.bannerText, styles.bannerTextSuccess]}>{successText(status.outcome)}</Text>
           </Animated.View>
         )}
         {status.kind === 'error' && (
-          <Animated.View entering={FADE} style={[styles.banner, styles.bannerError]} accessibilityLiveRegion="polite">
+          <Animated.View
+            testID={TestIDs.exportSheet.error}
+            entering={FADE}
+            style={[styles.banner, styles.bannerError]}
+            accessibilityLiveRegion="polite">
             <Ionicons name="alert-circle" size={18} color={Colors.warningText} />
             <View style={styles.bannerBody}>
               <Text style={[styles.bannerText, styles.bannerTextError]}>Export failed: {status.message}</Text>
@@ -226,7 +243,12 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
               {folder ? `Saves to ${folder}` : 'You’ll choose a folder the first time'}
             </Text>
             {folder ? (
-              <Pressable onPress={changeFolder} disabled={busy} hitSlop={8} accessibilityRole="button">
+              <Pressable
+                testID={TestIDs.exportSheet.changeFolder}
+                onPress={changeFolder}
+                disabled={busy}
+                hitSlop={8}
+                accessibilityRole="button">
                 <Text style={[styles.footerAction, busy && styles.disabledText]}>Change</Text>
               </Pressable>
             ) : null}

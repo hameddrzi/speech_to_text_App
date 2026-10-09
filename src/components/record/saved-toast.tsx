@@ -5,6 +5,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 
 
 import { Glass } from '@/components/glass';
 import { Timing, Travel, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Shadow, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -53,7 +54,7 @@ export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: P
   }));
 
   return (
-    <Animated.View style={[styles.wrap, { top }, style]} pointerEvents="box-none">
+    <Animated.View testID={TestIDs.record.savedToast} style={[styles.wrap, { top }, style]} pointerEvents="box-none">
       <Glass radius={Radius.xl} intensity={70} strong style={styles.toast} accessibilityLiveRegion="polite">
         <View style={styles.check}>
           <Ionicons name="checkmark" size={16} color="#FFFFFF" />
@@ -65,6 +66,7 @@ export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: P
           </Text>
         </View>
         <Pressable
+          testID={TestIDs.record.savedToastView}
           accessibilityRole="button"
           accessibilityLabel="View in Archive"
           hitSlop={8}

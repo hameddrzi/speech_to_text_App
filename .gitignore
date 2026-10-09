@@ -21,6 +21,9 @@ expo-env.d.ts
 # Metro
 .metro-health-check*
 
+# E2E test reports (scripts/e2e-devices.sh)
+reports/
+
 # debug
 npm-debug.*
 yarn-debug.*

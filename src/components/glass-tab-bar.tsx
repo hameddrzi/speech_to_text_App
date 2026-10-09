@@ -13,15 +13,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/components/glass';
 import { PressScale, Spring, Timing } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Shadow, Spacing, TabBarBottomGap, TabBarHeight } from '@/constants/theme';
 import { haptic } from '@/utils/haptics';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-const TABS: Record<string, { label: string; icon: IconName; iconActive: IconName }> = {
-  index: { label: 'Record', icon: 'mic-outline', iconActive: 'mic' },
-  archive: { label: 'Archive', icon: 'albums-outline', iconActive: 'albums' },
-  profile: { label: 'Profile', icon: 'person-circle-outline', iconActive: 'person-circle' },
+const TABS: Record<string, { label: string; icon: IconName; iconActive: IconName; testID: string }> = {
+  index: { label: 'Record', icon: 'mic-outline', iconActive: 'mic', testID: TestIDs.tab.record },
+  archive: { label: 'Archive', icon: 'albums-outline', iconActive: 'albums', testID: TestIDs.tab.archive },
+  profile: { label: 'Profile', icon: 'person-circle-outline', iconActive: 'person-circle', testID: TestIDs.tab.profile },
 };
 
 const BAR_WIDTH = 300;
@@ -39,7 +40,7 @@ function TabItem({
   width,
   onPress,
 }: {
-  meta: { label: string; icon: IconName; iconActive: IconName };
+  meta: { label: string; icon: IconName; iconActive: IconName; testID: string };
   focused: boolean;
   activeColor: string;
   width: number;
@@ -61,6 +62,7 @@ function TabItem({
 
   return (
     <Pressable
+      testID={meta.testID}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={meta.label}

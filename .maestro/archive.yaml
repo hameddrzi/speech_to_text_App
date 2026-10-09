@@ -1,0 +1,129 @@
+# Archive list: search (title match, no match, clear), filters, swipe → favorite, swipe → delete.
+appId: com.voicetranscript.app
+name: archive
+tags:
+  - archive
+---
+- runFlow: subflows/launch-clean.yaml
+
+# Empty archive first.
+- tapOn:
+    id: "tab-archive"
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- takeScreenshot: archive_01_empty
+
+# One short take to work with.
+- runFlow:
+    file: subflows/record-take.yaml
+    env:
+      TIMER_REGEX: '00:0[3-9],[0-9]{2}|Elapsed [3-9] seconds'
+- tapOn:
+    id: "tab-archive"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- assertNotVisible:
+    id: "archive-empty-state"
+- takeScreenshot: archive_02_one_row
+
+# ── Search ──
+# (No hideKeyboard: on Android it may send Back, which leaves the tab. The keyboard
+# doesn't cover the list header or the first row.)
+- tapOn:
+    id: "archive-search"
+- inputText: "New Rec"
+- assertVisible:
+    id: "recording-row-.*"
+- takeScreenshot: archive_03_search_match
+- tapOn:
+    id: "archive-search"
+- eraseText: 20
+- inputText: "zzqx no match"
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- assertVisible: "No Results"
+- assertNotVisible:
+    id: "recording-row-.*"
+- takeScreenshot: archive_04_search_no_results
+- tapOn:
+    id: "archive-search-clear"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+
+# ── Filters ──
+- tapOn:
+    id: "archive-filter-favorites"
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- assertVisible: "No Favorites"
+- takeScreenshot: archive_05_filter_favorites_empty
+- tapOn:
+    id: "archive-filter-transcribed"
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- assertVisible: "No Transcripts.*"
+- takeScreenshot: archive_06_filter_transcribed_empty
+- tapOn:
+    id: "archive-filter-all"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+
+# ── Swipe → favorite ──
+- swipe:
+    from:
+      id: "recording-row-.*"
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: archive_07_swipe_actions
+- tapOn:
+    id: "row-action-favorite"
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    id: "archive-filter-favorites"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- assertNotVisible:
+    id: "archive-empty-state"
+- takeScreenshot: archive_08_filter_favorites_has_row
+
+# ── Swipe → delete (confirm in the system alert) ──
+- tapOn:
+    id: "archive-filter-all"
+- extendedWaitUntil:
+    visible:
+      id: "recording-row-.*"
+    timeout: 5000
+- swipe:
+    from:
+      id: "recording-row-.*"
+    direction: LEFT
+- waitForAnimationToEnd:
+    timeout: 2000
+- tapOn:
+    id: "row-action-delete"
+- runFlow: subflows/confirm-alert.yaml
+- extendedWaitUntil:
+    visible:
+      id: "archive-empty-state"
+    timeout: 5000
+- assertNotVisible:
+    id: "recording-row-.*"
+- takeScreenshot: archive_09_deleted

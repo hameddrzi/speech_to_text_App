@@ -5,6 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } fr
 
 import { Glass } from '@/components/glass';
 import { PressScale, Spring, Timing } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 const AVATAR = 96;
@@ -61,6 +62,7 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
       <Text style={styles.subtitle}>{subtitle}</Text>
 
       <Pressable
+        testID={TestIDs.profile.nameEdit}
         accessibilityRole="button"
         accessibilityLabel={name ? 'Edit name' : 'Add your name'}
         onPress={onEdit}

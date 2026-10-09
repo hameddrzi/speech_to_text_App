@@ -17,6 +17,7 @@ import { RecordStatus } from '@/components/record/record-status';
 import { SavedToast } from '@/components/record/saved-toast';
 import { downsampleLevels } from '@/components/record/waveform-utils';
 import { Timing } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import {
   Colors,
   Radius,
@@ -178,6 +179,7 @@ export default function RecordScreen() {
         <View style={styles.stage}>
           <View style={styles.timerBlock}>
             <Animated.Text
+              testID={TestIDs.record.timer}
               style={[styles.timer, compact && styles.timerCompact, timerStyle]}
               accessibilityRole="timer"
               accessibilityLabel={`Elapsed ${Math.floor(elapsedMs / 1000)} seconds`}>
@@ -215,6 +217,7 @@ export default function RecordScreen() {
         {/* Controls */}
         <Glass radius={Radius.xl} intensity={55} style={styles.controls}>
           <ControlButton
+            testID={TestIDs.record.discard}
             icon="trash-outline"
             accessibilityLabel="Discard recording"
             onPress={onDiscard}
@@ -222,6 +225,7 @@ export default function RecordScreen() {
             color={Colors.record}
           />
           <RecordButton
+            testID={TestIDs.record.button}
             recording={isActive || phase === 'saving'}
             live={phase === 'recording'}
             onPress={onRecordPress}
@@ -230,6 +234,7 @@ export default function RecordScreen() {
             accessibilityLabel={isActive ? 'Stop and save recording' : 'Start recording'}
           />
           <ControlButton
+            testID={TestIDs.record.pauseResume}
             icon={phase === 'paused' ? 'play' : 'pause'}
             accessibilityLabel={phase === 'paused' ? 'Resume recording' : 'Pause recording'}
             onPress={onPauseResume}

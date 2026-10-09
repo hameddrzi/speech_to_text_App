@@ -14,14 +14,17 @@ export function SkipButton({
   direction,
   onPress,
   size = 30,
+  testID,
 }: {
   direction: 'back' | 'forward';
   onPress: () => void;
   size?: number;
+  testID?: string;
 }) {
   const back = direction === 'back';
   return (
     <Pressable
+      testID={testID}
       onPress={() => {
         haptic.light();
         onPress();
@@ -53,10 +56,12 @@ export function PlayButton({
   playing,
   onPress,
   large = false,
+  testID,
 }: {
   playing: boolean;
   onPress: () => void;
   large?: boolean;
+  testID?: string;
 }) {
   const size = large ? 72 : 48;
   const iconSize = large ? 32 : 34;
@@ -82,6 +87,7 @@ export function PlayButton({
 
   return (
     <Pressable
+      testID={testID}
       onPress={() => {
         haptic.medium();
         onPress();
@@ -108,9 +114,10 @@ export function PlayButton({
 }
 
 /** Glass pill cycling 1× → 1.5× → 2×. */
-export function SpeedPill({ rate, onPress }: { rate: PlaybackRate; onPress: () => void }) {
+export function SpeedPill({ rate, onPress, testID }: { rate: PlaybackRate; onPress: () => void; testID?: string }) {
   return (
     <Pressable
+      testID={testID}
       onPress={() => {
         haptic.selection();
         onPress();
@@ -135,6 +142,7 @@ export function GlassIconButton({
   color = Colors.label,
   size = 40,
   iconSize = 19,
+  testID,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
@@ -142,9 +150,10 @@ export function GlassIconButton({
   color?: string;
   size?: number;
   iconSize?: number;
+  testID?: string;
 }) {
   return (
-    <Pressable onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label}>
+    <Pressable testID={testID} onPress={onPress} hitSlop={6} accessibilityRole="button" accessibilityLabel={label}>
       {({ pressed }) => (
         <Glass
           radius={size / 2}

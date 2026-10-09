@@ -1,0 +1,83 @@
+# Downloads the Tiny Whisper model (78 MB) from Hugging Face: select → GET → cancel → GET → ready.
+# Needs a working internet connection on the phone (Wi-Fi recommended). Up to ~5 minutes.
+#
+# Leaves Tiny installed and selected, so transcribe-e2e.yaml can run right after it without
+# downloading again (as long as nothing in between clears the app's data).
+appId: com.voicetranscript.app
+name: model-download
+tags:
+  - network
+  - slow
+---
+- runFlow: subflows/launch-clean.yaml
+
+# A fresh install has no model: the pill on Record says so.
+- assertVisible:
+    id: "model-pill"
+    text: "No speech model downloaded.*|Get Model"
+
+- tapOn:
+    id: "tab-profile"
+- tapOn:
+    id: "speech-model-row"
+- extendedWaitUntil:
+    visible:
+      id: "model-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "model-option-tiny"
+- assertVisible:
+    id: "model-option-small"
+- takeScreenshot: model-download_01_model_sheet
+- tapOn:
+    id: "model-option-tiny"
+- extendedWaitUntil:
+    notVisible:
+      id: "model-sheet"
+    timeout: 5000
+- assertVisible:
+    id: "speech-model-row"
+    text: "Speech Model, Tiny|Tiny"
+
+# GET → downloading → cancel → back to GET.
+- extendedWaitUntil:
+    visible:
+      id: "model-download-get"
+    timeout: 5000
+- tapOn:
+    id: "model-download-get"
+- extendedWaitUntil:
+    visible:
+      id: "model-download-cancel"
+    timeout: 15000
+- assertVisible: "Downloading Tiny.*"
+- takeScreenshot: model-download_02_downloading
+- tapOn:
+    id: "model-download-cancel"
+- extendedWaitUntil:
+    visible:
+      id: "model-download-get"
+    timeout: 10000
+- takeScreenshot: model-download_03_cancelled
+
+# GET again and wait for the whole file.
+- tapOn:
+    id: "model-download-get"
+- extendedWaitUntil:
+    visible:
+      id: "model-download-cancel"
+    timeout: 15000
+- extendedWaitUntil:
+    visible: "Model Ready"
+    timeout: 300000
+- assertVisible:
+    id: "model-remove"
+- takeScreenshot: model-download_04_ready
+
+# The Record pill now shows the active model.
+- tapOn:
+    id: "tab-record"
+- assertVisible:
+    id: "model-pill"
+    text: "Speech model Tiny is ready.*|Tiny"
+- takeScreenshot: model-download_05_record_pill

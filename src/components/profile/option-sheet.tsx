@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { Duration } from '@/constants/motion';
+import { optionSheetIds } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Option } from '@/store/settings';
 
@@ -15,19 +16,36 @@ type Props<T extends string> = {
   value: T;
   onSelect: (value: T) => void;
   onClose: () => void;
+  /** Prefix for the e2e testIDs (`<prefix>-sheet`, `<prefix>-sheet-done`, `<prefix>-option-<value>`). */
+  testIDPrefix?: string;
 };
 
 /** Frosted bottom sheet with an inset-grouped checkmark list — iOS picker style. */
-export function OptionSheet<T extends string>({ visible, title, message, options, value, onSelect, onClose }: Props<T>) {
+export function OptionSheet<T extends string>({
+  visible,
+  title,
+  message,
+  options,
+  value,
+  onSelect,
+  onClose,
+  testIDPrefix,
+}: Props<T>) {
+  const ids = testIDPrefix ? optionSheetIds(testIDPrefix) : undefined;
   return (
     <BottomSheet visible={visible} onClose={onClose}>
-      <Glass strong intensity={80} radius={Radius.xl} style={styles.sheet}>
+      <Glass testID={ids?.sheet} strong intensity={80} radius={Radius.xl} style={styles.sheet}>
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
           <Text style={styles.title} accessibilityRole="header">
             {title}
           </Text>
-          <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Done">
+          <Pressable
+            testID={ids?.done}
+            onPress={onClose}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Done">
             <Text style={styles.done}>Done</Text>
           </Pressable>
         </View>
@@ -40,6 +58,7 @@ export function OptionSheet<T extends string>({ visible, title, message, options
               <View key={o.value}>
                 {i > 0 && <View style={styles.separator} />}
                 <Pressable
+                  testID={ids?.option(o.value)}
                   accessibilityRole="radio"
                   accessibilityState={{ selected }}
                   accessibilityLabel={o.detail ? `${o.label}, ${o.detail}` : o.label}

@@ -116,6 +116,7 @@ for details.
 | [docs/architecture.md](docs/architecture.md) | How the app is put together: screens, state, storage, data flow |
 | [docs/speech-to-text.md](docs/speech-to-text.md) | The on-device transcription pipeline, models, tuning and troubleshooting |
 | [docs/design-system.md](docs/design-system.md) | Colors, type, spacing and the `<Glass>` material, plus rules for new UI |
+| [docs/testing.md](docs/testing.md) | End-to-end tests with Maestro on real phones, the multi-device runner, manual checklist and device matrix |
 
 ---
 
@@ -144,6 +145,7 @@ src/
 ├── store/                    # Recordings and settings (React context + JSON persistence)
 ├── data/                     # Recording types and web preview sample data
 ├── constants/theme.ts        # Design tokens
+├── constants/test-ids.ts     # testIDs used by the Maestro E2E flows
 └── utils/                    # Formatting, JSON storage
 ```
 
@@ -157,7 +159,13 @@ npx expo run:android          # build + install the development build
 npx tsc --noEmit              # type check
 npx expo lint                 # lint
 npx expo install <package>    # add a dependency at the SDK-compatible version
+
+maestro test .maestro --exclude-tags slow,network,manual,stress   # quick E2E pass on a connected phone
+scripts/e2e-devices.sh --quick                                    # same, on every connected phone
+node scripts/check-e2e-ids.js                                     # flows only use ids defined in test-ids.ts
 ```
+
+See [docs/testing.md](docs/testing.md) for the end-to-end test setup.
 
 The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo run:*` or
 `npx expo prebuild` recreates them.

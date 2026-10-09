@@ -22,6 +22,7 @@ import { ProgressBar } from '@/components/profile/progress-bar';
 import { SEPARATOR_INSET, SettingsRow, SettingsSection } from '@/components/profile/settings-list';
 import { useModelDownload } from '@/stt/use-model-download';
 import { Duration } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
@@ -97,6 +98,7 @@ export default function ProfileScreen() {
       <AmbientBackground variant="profile" />
 
       <Animated.ScrollView
+        testID={TestIDs.profile.scroll}
         onScroll={onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -129,6 +131,7 @@ export default function ProfileScreen() {
           header="Transcription"
           footer="Speech is transcribed on this device with Whisper. Larger models are more accurate but slower and use more storage.">
           <SettingsRow
+            testID={TestIDs.profile.speechModelRow}
             icon="hardware-chip"
             iconColor="#5E5CE6"
             title="Speech Model"
@@ -144,12 +147,14 @@ export default function ProfileScreen() {
           <FadeSwap swapKey={isDownloading ? 'downloading' : isDownloaded ? 'ready' : 'get'} duration={Duration.base}>
             {isDownloading ? (
               <SettingsRow
+                testID={TestIDs.profile.modelStatusRow}
                 icon="cloud-download"
                 iconColor={Colors.tint}
                 title={`Downloading ${model.label}…`}
                 subtitle={`${Math.round(download.progress * 100)}% of ${model.detail}`}
                 accessory={
                   <Pressable
+                    testID={TestIDs.profile.modelCancel}
                     accessibilityRole="button"
                     accessibilityLabel="Cancel download"
                     hitSlop={10}
@@ -164,12 +169,14 @@ export default function ProfileScreen() {
               </SettingsRow>
             ) : isDownloaded ? (
               <SettingsRow
+                testID={TestIDs.profile.modelStatusRow}
                 icon="checkmark-circle"
                 iconColor={Colors.success}
                 title="Model Ready"
                 subtitle={`${model.label} · ${model.detail} on device`}
                 accessory={
                   <Pressable
+                    testID={TestIDs.profile.modelRemove}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${model.label} model`}
                     hitSlop={10}
@@ -185,12 +192,14 @@ export default function ProfileScreen() {
               />
             ) : (
               <SettingsRow
+                testID={TestIDs.profile.modelStatusRow}
                 icon="cloud-download"
                 iconColor={Colors.tint}
                 title={downloadError ? 'Download Failed' : 'Download Model'}
                 subtitle={downloadError ?? `${model.label} · ${model.detail} · needed to transcribe`}
                 accessory={
                   <Pressable
+                    testID={TestIDs.profile.modelGet}
                     accessibilityRole="button"
                     accessibilityLabel={`Download ${model.label} model, ${model.detail}`}
                     hitSlop={8}
@@ -213,6 +222,7 @@ export default function ProfileScreen() {
             subtitle="Show text while recording"
             accessory={
               <GlassSwitch
+                testID={TestIDs.profile.liveTranscriptSwitch}
                 accessibilityLabel="Live transcript while recording"
                 value={settings.liveTranscript}
                 onValueChange={(v) => set('liveTranscript', v)}
@@ -232,6 +242,7 @@ export default function ProfileScreen() {
             title="Haptics"
             accessory={
               <GlassSwitch
+                testID={TestIDs.profile.hapticsSwitch}
                 accessibilityLabel="Haptics"
                 value={settings.haptics}
                 onValueChange={(v) => set('haptics', v)}
@@ -263,6 +274,7 @@ export default function ProfileScreen() {
             </View>
           </View>
           <SettingsRow
+            testID={TestIDs.profile.autoDeleteRow}
             icon="trash"
             iconColor="#8E8E93"
             title="Delete Recordings"
@@ -309,6 +321,7 @@ export default function ProfileScreen() {
       </Animated.View>
 
       <OptionSheet
+        testIDPrefix={TestIDs.optionSheet.model}
         visible={sheet === 'model'}
         title="Speech Model"
         message="Whisper runs fully on device. Pick the balance of speed, accuracy and size that suits your phone."
@@ -328,6 +341,7 @@ export default function ProfileScreen() {
         onClose={() => setSheet(null)}
       />
       <OptionSheet
+        testIDPrefix={TestIDs.optionSheet.autoDelete}
         visible={sheet === 'autoDelete'}
         title="Delete Recordings"
         message="Automatically remove recordings and their transcripts older than:"

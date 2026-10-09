@@ -1,0 +1,89 @@
+# Smoke: the app launches clean, the microphone dialog is handled, one take can be recorded,
+# and all three tabs render. Run this first on every new phone (about 1 minute).
+appId: com.voicetranscript.app
+name: smoke
+tags:
+  - smoke
+  - quick
+---
+# Launch with the microphone permission reset, so the real system dialog is exercised.
+- launchApp:
+    clearState: true
+    stopApp: true
+    permissions:
+      all: unset
+- extendedWaitUntil:
+    visible:
+      id: "tab-record"
+    timeout: 30000
+- assertVisible:
+    id: "tab-archive"
+- assertVisible:
+    id: "tab-profile"
+
+# ── Record tab ──
+- assertVisible:
+    id: "record-button"
+- assertVisible:
+    id: "record-timer"
+- assertVisible:
+    id: "record-status"
+    text: "Ready to record"
+- assertVisible:
+    id: "live-transcript-card"
+- assertVisible:
+    id: "model-pill"
+- takeScreenshot: smoke_01_record_idle
+
+# First record tap triggers the system microphone dialog.
+- tapOn:
+    id: "record-button"
+- runFlow: subflows/allow-mic-permission.yaml
+- extendedWaitUntil:
+    visible:
+      id: "record-status"
+      text: "Recording.*"
+    timeout: 10000
+- takeScreenshot: smoke_02_recording
+- tapOn:
+    id: "record-button"
+- extendedWaitUntil:
+    visible:
+      id: "saved-toast"
+    timeout: 15000
+- takeScreenshot: smoke_03_saved_toast
+
+# ── Archive tab ──
+- tapOn:
+    id: "tab-archive"
+- extendedWaitUntil:
+    visible:
+      id: "archive-search"
+    timeout: 5000
+- assertVisible:
+    id: "archive-filter-all"
+- assertVisible:
+    id: "recording-row-.*"
+- takeScreenshot: smoke_04_archive
+
+# ── Profile tab ──
+- tapOn:
+    id: "tab-profile"
+- extendedWaitUntil:
+    visible:
+      id: "speech-model-row"
+    timeout: 5000
+- assertVisible:
+    id: "profile-name-edit"
+- assertVisible:
+    id: "live-transcript-switch"
+- takeScreenshot: smoke_05_profile
+
+# ── Back to Record ──
+- tapOn:
+    id: "tab-record"
+- assertVisible:
+    id: "record-button"
+- assertVisible:
+    id: "record-status"
+    text: "Ready to record"

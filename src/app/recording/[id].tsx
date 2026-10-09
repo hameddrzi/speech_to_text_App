@@ -21,6 +21,7 @@ import { TranscriptCard } from '@/components/archive/transcript-card';
 import { SKIP_SECONDS, usePlayback } from '@/components/archive/use-playback';
 import { WaveformScrubber } from '@/components/archive/waveform-scrubber';
 import { Glass } from '@/components/glass';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, ScreenPadding, Shadow, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
@@ -78,6 +79,7 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
   if (editing) {
     return (
       <TextInput
+        testID={TestIDs.detail.titleInput}
         value={draft}
         onChangeText={setDraft}
         autoFocus
@@ -94,6 +96,7 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
 
   return (
     <Pressable
+      testID={TestIDs.detail.title}
       onPress={() => {
         haptic.selection();
         setDraft(title);
@@ -212,7 +215,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           paddingHorizontal: ScreenPadding,
         }}>
         <EditableTitle title={recording.title} onRename={(title) => updateRecording(recording.id, { title })} />
-        <Text style={styles.meta}>
+        <Text testID={TestIDs.detail.meta} style={styles.meta}>
           {formatRecordingDate(recording.createdAt)} · {formatDuration(recording.duration)}
         </Text>
 
@@ -233,6 +236,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
         onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}>
         <Glass strong radius={Radius.xl} intensity={70} style={styles.dock}>
           <WaveformScrubber
+            testID={TestIDs.detail.scrubber}
             waveform={recording.waveform}
             progress={progress}
             playing={pb.playing}
@@ -245,18 +249,33 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
             accessibilityValueText={`${formatDuration(shownTime)} of ${formatDuration(duration)}`}
           />
           <View style={styles.times}>
-            <Text style={styles.time}>{formatDuration(shownTime)}</Text>
-            <Text style={styles.time}>-{formatDuration(duration - shownTime)}</Text>
+            <Text testID={TestIDs.detail.position} style={styles.time}>
+              {formatDuration(shownTime)}
+            </Text>
+            <Text testID={TestIDs.detail.remaining} style={styles.time}>
+              -{formatDuration(duration - shownTime)}
+            </Text>
           </View>
           <View style={styles.controls}>
             <View style={styles.side}>
-              <SpeedPill rate={pb.rate} onPress={pb.cycleRate} />
+              <SpeedPill testID={TestIDs.detail.speed} rate={pb.rate} onPress={pb.cycleRate} />
             </View>
-            <SkipButton direction="back" onPress={() => pb.skip(-SKIP_SECONDS)} size={30} />
-            <PlayButton large playing={pb.playing} onPress={pb.toggle} />
-            <SkipButton direction="forward" onPress={() => pb.skip(SKIP_SECONDS)} size={30} />
+            <SkipButton
+              testID={TestIDs.detail.skipBack}
+              direction="back"
+              onPress={() => pb.skip(-SKIP_SECONDS)}
+              size={30}
+            />
+            <PlayButton testID={TestIDs.detail.play} large playing={pb.playing} onPress={pb.toggle} />
+            <SkipButton
+              testID={TestIDs.detail.skipForward}
+              direction="forward"
+              onPress={() => pb.skip(SKIP_SECONDS)}
+              size={30}
+            />
             <View style={[styles.side, styles.sideRight]}>
               <GlassIconButton
+                testID={TestIDs.detail.favorite}
                 icon={recording.favorite ? 'star' : 'star-outline'}
                 color={recording.favorite ? Colors.warning : Colors.label}
                 label={recording.favorite ? 'Remove from favorites' : 'Add to favorites'}
@@ -278,11 +297,19 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           <Glass radius={0} elevated={false} intensity={60} strong style={StyleSheet.absoluteFill} />
           <View style={styles.hairline} />
         </Animated.View>
-        <GlassIconButton icon="chevron-back" label="Back" size={38} iconSize={20} onPress={goBack} />
+        <GlassIconButton
+          testID={TestIDs.detail.back}
+          icon="chevron-back"
+          label="Back"
+          size={38}
+          iconSize={20}
+          onPress={goBack}
+        />
         <Animated.Text numberOfLines={1} style={[styles.headerTitle, headerTitleStyle]}>
           {recording.title}
         </Animated.Text>
         <GlassIconButton
+          testID={TestIDs.detail.export}
           icon="download-outline"
           label="Export transcript"
           size={38}
@@ -293,6 +320,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           }}
         />
         <GlassIconButton
+          testID={TestIDs.detail.share}
           icon="share-outline"
           label="Share"
           size={38}
@@ -300,6 +328,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           onPress={() => shareRecording(recording)}
         />
         <GlassIconButton
+          testID={TestIDs.detail.delete}
           icon="trash-outline"
           label="Delete recording"
           color={Colors.record}

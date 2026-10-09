@@ -4,6 +4,7 @@ import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Timing, useMotion } from '@/constants/motion';
+import { TestIDs } from '@/constants/test-ids';
 import { Spacing } from '@/constants/theme';
 
 type Props = {
@@ -60,6 +61,7 @@ export function BottomSheet({ visible, onClose, closeLabel = 'Close', children }
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <Animated.View style={[StyleSheet.absoluteFill, styles.backdrop, backdropStyle]}>
           <Pressable
+            testID={TestIDs.sheetBackdrop}
             style={StyleSheet.absoluteFill}
             onPress={onClose}
             accessibilityRole="button"

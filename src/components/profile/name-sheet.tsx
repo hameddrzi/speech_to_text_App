@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
+import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -34,18 +35,29 @@ export function NameSheet({ visible, name, onSave, onClose }: Props) {
       <Glass strong intensity={80} radius={Radius.xl} style={styles.sheet}>
         <View style={styles.grabber} />
         <View style={styles.headerRow}>
-          <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cancel">
+          <Pressable
+            testID={TestIDs.profile.nameCancel}
+            onPress={onClose}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel">
             <Text style={styles.cancel}>Cancel</Text>
           </Pressable>
           <Text style={styles.title} accessibilityRole="header">
             Your Name
           </Text>
-          <Pressable onPress={save} hitSlop={10} accessibilityRole="button" accessibilityLabel="Save name">
+          <Pressable
+            testID={TestIDs.profile.nameSave}
+            onPress={save}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel="Save name">
             <Text style={styles.save}>Save</Text>
           </Pressable>
         </View>
 
         <TextInput
+          testID={TestIDs.profile.nameInput}
           value={draft}
           onChangeText={setDraft}
           placeholder="Name"
