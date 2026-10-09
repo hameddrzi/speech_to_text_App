@@ -226,6 +226,7 @@ React Native picks `*.native.ts` on phones and the plain `.ts` file on web:
 |---|---|---|
 | `hooks/record-session` | Real microphone and WAV | `expo-audio` recorder or a simulated waveform |
 | `stt/engine` | whisper.rn | Stub that reports transcription as unavailable |
+| `utils/web-audio`, `hooks/use-audio-source` | No-ops (the WAV file URI is played directly) | Copies the recorded Blob into IndexedDB (`idb:<id>`) and resolves it to an object URL for playback; a dead `blob:` URL shows as unavailable |
 
 The web build exists so the UI can be previewed in a browser. It starts with sample recordings
 from `src/data/recordings.ts`; the phone app starts empty.

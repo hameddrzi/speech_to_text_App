@@ -103,6 +103,30 @@ Shadow    soft (cards) · lifted (floating controls)
 
 - Screen side padding: `ScreenPadding` (20).
 - Every tab screen reserves `TabBarHeight + TabBarBottomGap` at the bottom for the floating tab bar.
+- **Content width:** on wide windows (unfolded foldables, tablets) every screen centers its content in a
+  `ContentMaxWidth` (640) column: `width: '100%', maxWidth: ContentMaxWidth, alignSelf: 'center'` on the list /
+  scroll content, docks and header rows. Backgrounds, blobs and the frosted bars stay full-bleed.
+- **Short windows** (`height < ShortWindowHeight`, 560: a phone in landscape, split screen; Android 16 ignores the
+  portrait lock on large screens) must keep every control reachable: Record scrolls and, when wide, splits into two
+  columns (timer + waveform | transcript + controls); the detail player collapses to one row; the Archive empty
+  state drops its illustration.
+
+## Touch targets and text size
+
+- **Every tappable element has a touch target of at least 44 × 44 pt** (`MinTouchTarget`), without changing how it
+  looks. Grow small controls with `hitSlop={touchSlop(w, h)}`; for word-sized text buttons in sheets ("Done",
+  "Save", "Cancel") spread `TextButtonHitArea` into the style (invisible padding cancelled by a negative margin), which
+  also works on web, where react-native-web ignores `hitSlop`. On Android a slop only works inside the parent's
+  bounds, so prefer a bigger real box where a control sits at the edge of its container (the segmented control lays
+  its segments over a 44 pt area around the 36 pt track).
+- **Text scales with the system text size.** Don't size text containers in fixed pixels; give them a min / max
+  height in lines of the *scaled* text (`useWindowDimensions().fontScale`), as the Live Transcript card does, and
+  let titles wrap (settings rows: 2 lines, the trailing value truncates first).
+- Only text inside fixed-size elements gets a `maxFontSizeMultiplier` from `FontScaleCap`: chips and pills (1.4),
+  tab bar and segmented labels (1.5), the 56 pt timer (1.2). Never turn font scaling off.
+- Custom controls expose their state on every platform: `accessibilityState` for native plus `aria-checked` /
+  `aria-selected` for web (react-native-web ignores `accessibilityState`). A settings row whose accessory is a switch
+  passes `labelledByAccessory`, so the row's title isn't read again before the switch's own label.
 
 ## Motion and feedback
 
