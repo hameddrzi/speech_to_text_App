@@ -1,4 +1,4 @@
-import type { FileTranscribeRequest, SttRequest, SttSegment } from '@/stt/types';
+import type { FileTranscribeRequest, PcmTuning, SttRequest, SttSegment } from '@/stt/types';
 
 /**
  * Web stand-in for the on-device Whisper engine (see engine.native.ts).
@@ -19,7 +19,7 @@ export function transcribeFile(_uri: string, _req: FileTranscribeRequest): Promi
   return Promise.reject(new Error(UNSUPPORTED));
 }
 
-export function transcribePcmIfIdle(_pcm: Uint8Array, _req: SttRequest): Promise<string | null> {
+export function transcribePcmIfIdle(_pcm: Uint8Array, _req: SttRequest, _tuning?: PcmTuning): Promise<string | null> {
   return Promise.resolve(null);
 }
 

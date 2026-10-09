@@ -186,10 +186,37 @@ Android audio source `VOICE_RECOGNITION`) is used three times:
 
 1. **Level meter:** RMS loudness → a smoothed bar every 60 ms for the waveform.
 2. **`WavWriter`:** appended straight to the WAV file, so long recordings never stay in memory.
-   The WAV header is patched with the real length when the session stops.
-3. **`LiveTranscriber`:** buffered for the live preview, if enabled.
+   The WAV header's length fields are patched every ~2 s of audio and exactly on stop, so the file is
+   always playable.
+3. **`LiveTranscriber`:** buffered for the live preview, if enabled (see speech-to-text.md).
 
-If the screen unmounts mid-recording, the hook stops the microphone and discards the partial file.
+**A take is never lost silently:**
+
+- If the screen unmounts mid-take (Android recreates the Activity on font-size, density or locale
+  changes), the hook finishes the WAV and hands the take to the screen's `onAutoStop`, which saves it
+  like a normal stop. If the whole React tree is going away, the save may not reach disk; then the next
+  bullet catches it.
+- `<OrphanRecovery />` (`src/stt/orphan-recovery.tsx`, mounted in the root layout inside
+  `RecordingsProvider`) scans `recordings/` ~1.5 s after mount. Any `rec-*.wav` not referenced by a
+  recording (compared by file name, since URIs are rebased on load) gets its header repaired and is added
+  as *Recovered Recording* with `transcriptStatus: 'processing'` (`createdAt` = file modification time,
+  waveform from 90 small reads). A file a `WavWriter` is still writing is skipped.
+
+**Screen off and background:**
+
+- The screen is kept awake while a take is active (`expo-keep-awake`, tag `voice-recording`).
+- **Android** silences the microphone of a background app unless it runs a *microphone* foreground
+  service. The PCM stream has none, so `src/hooks/background-capture.android.ts` starts expo-audio's
+  `AudioRecordingService` (enabled by `enableBackgroundRecording` in the expo-audio plugin config) by
+  starting a tiny AMR `AudioRecorder` with `allowsBackgroundRecording: true` and pausing it immediately.
+  It shows the "Recording audio" notification (Android 13+ asks for the notification permission first;
+  expo-audio refuses to start the service without it). Tapping **Stop** there ends and saves the take.
+  Without the service (permission denied, Android 9 and older) the status line says *Keep Voice open
+  while recording*, and if the app was backgrounded anyway, *Audio may be missing while in background*.
+- **iOS:** the plugin adds the `audio` background mode, and `background-capture.ts` sets an audio mode
+  with `allowsRecording` and `allowsBackgroundRecording`, so the AudioQueue keeps recording.
+- A watchdog reopens the microphone stream if no chunk arrived for 3 s while the app is in the
+  foreground (e.g. after an iOS phone-call interruption). AppState transitions are logged.
 
 ### Platform variants
 

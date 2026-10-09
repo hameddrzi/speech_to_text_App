@@ -28,9 +28,10 @@ import {
   Type,
 } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
-import { RECORD_TICK_MS, useRecordSession } from '@/hooks/record-session';
+import { RECORD_TICK_MS, useRecordSession, type FinishedRecording } from '@/hooks/record-session';
 import { useRecordings } from '@/store/recordings';
 import { useSettings } from '@/store/settings';
+import { livePreviewBlockReason } from '@/stt/live-preview';
 import { STT_SUPPORTED } from '@/stt/model-files';
 import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatTimer } from '@/utils/format';
@@ -47,19 +48,46 @@ function nextRecordingTitle(recordings: Recording[]): string {
   return max === 0 ? 'New Recording' : `New Recording ${max + 1}`;
 }
 
+function toRecording(result: FinishedRecording, id: string, title: string): Recording {
+  return {
+    id,
+    title,
+    createdAt: new Date().toISOString(),
+    duration: Math.max(1, Math.round(result.durationMs / 1000)),
+    uri: result.uri,
+    waveform: downsampleLevels(result.levels, 90),
+    transcript: [],
+    // The background TranscriptionWorker picks this up and runs the accurate on-device pass.
+    transcriptStatus: result.uri ? 'processing' : 'none',
+    favorite: false,
+  };
+}
+
 export default function RecordScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
   const compact = windowHeight < 720;
 
   const { recordings, addRecording } = useRecordings();
-  const session = useRecordSession();
+  const takeIdRef = useRef<string | null>(null);
+  const takeTitleRef = useRef('New Recording');
+  const [toast, setToast] = useState<{ id: string; title: string } | null>(null);
+
+  // A take that ends without the Stop button (screen unmounted mid-take, or "Stop" in the Android
+  // recording notification) is saved exactly like a normal one.
+  const session = useRecordSession({
+    onAutoStop: (result) => {
+      const rec = toRecording(result, takeIdRef.current ?? `rec-${Date.now()}`, takeTitleRef.current);
+      addRecording(rec);
+      setToast({ id: rec.id, title: rec.title });
+    },
+  });
   const { phase, elapsedMs, samples, permission } = session;
 
   const { settings } = useSettings();
   const modelReady = useSelectedModelReady();
-  const takeIdRef = useRef<string | null>(null);
-  const [toast, setToast] = useState<{ id: string; title: string } | null>(null);
+  // Turbo or a phone with < 6 GB RAM: the preview stays off whatever the Profile switch says.
+  const previewBlocked = livePreviewBlockReason(settings.speechModel);
 
   // Rolling on-device Whisper preview while recording (empty on web or when disabled in Profile).
   const liveTranscript = session.liveText;
@@ -69,7 +97,9 @@ export default function RecordScreen() {
       ? 'Download a speech model in Profile to see your words here while you record.'
       : !settings.liveTranscript
         ? 'Live transcript is off. Your recording is transcribed after you stop.'
-        : undefined;
+        : previewBlocked
+          ? `${previewBlocked} Your recording is transcribed after you stop.`
+          : undefined;
 
   const isActive = phase === 'recording' || phase === 'paused';
   const busy = phase === 'starting' || phase === 'saving';
@@ -83,6 +113,9 @@ export default function RecordScreen() {
     color: interpolateColor(timerOn.get(), [0, 1], [Colors.labelTertiary, Colors.label]),
   }));
   const nextTitle = nextRecordingTitle(recordings);
+  useEffect(() => {
+    if (!isActive) takeTitleRef.current = nextTitle;
+  }, [isActive, nextTitle]);
   const bottomSpace = TabBarHeight + Math.max(insets.bottom, TabBarBottomGap) + Spacing.lg;
 
   const today = new Date().toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' });
@@ -90,18 +123,7 @@ export default function RecordScreen() {
   const save = useCallback(async () => {
     const result = await session.stop();
     if (!result) return;
-    const rec: Recording = {
-      id: takeIdRef.current ?? `rec-${Date.now()}`,
-      title: nextTitle,
-      createdAt: new Date().toISOString(),
-      duration: Math.max(1, Math.round(result.durationMs / 1000)),
-      uri: result.uri,
-      waveform: downsampleLevels(result.levels, 90),
-      transcript: [],
-      // The background TranscriptionWorker picks this up and runs the accurate on-device pass.
-      transcriptStatus: result.uri ? 'processing' : 'none',
-      favorite: false,
-    };
+    const rec = toRecording(result, takeIdRef.current ?? `rec-${Date.now()}`, nextTitle);
     addRecording(rec);
     setToast({ id: rec.id, title: rec.title });
     haptic.success();
@@ -115,12 +137,12 @@ export default function RecordScreen() {
       await session.start({
         id: takeIdRef.current,
         model: settings.speechModel,
-        liveTranscript: settings.liveTranscript,
+        liveTranscript: settings.liveTranscript && !previewBlocked,
       });
     } else if (isActive) {
       await save();
     }
-  }, [phase, isActive, session, save, settings.speechModel, settings.liveTranscript]);
+  }, [phase, isActive, session, save, settings.speechModel, settings.liveTranscript, previewBlocked]);
 
   const onPauseResume = useCallback(() => {
     haptic.selection();
@@ -185,7 +207,7 @@ export default function RecordScreen() {
               accessibilityLabel={`Elapsed ${Math.floor(elapsedMs / 1000)} seconds`}>
               {formatTimer(elapsedMs)}
             </Animated.Text>
-            <RecordStatus phase={phase} message={session.error} simulated={session.simulated} />
+            <RecordStatus phase={phase} message={session.error ?? session.notice} simulated={session.simulated} />
           </View>
 
           <LiveWaveform

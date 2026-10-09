@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Colors } from '@/constants/theme';
 import { RecordingsProvider } from '@/store/recordings';
 import { SettingsProvider } from '@/store/settings';
+import { OrphanRecovery } from '@/stt/orphan-recovery';
 import { TranscriptionWorker } from '@/stt/transcription-worker';
 
 SplashScreen.preventAutoHideAsync();
@@ -28,6 +29,7 @@ export default function RootLayout() {
         <SettingsProvider>
           <RecordingsProvider>
             <TranscriptionWorker />
+            <OrphanRecovery />
             <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
               <Stack.Screen name="(tabs)" />

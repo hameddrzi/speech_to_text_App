@@ -234,7 +234,16 @@ The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo ru
 - **English only.** Transcription always runs with Whisper's language set to English.
 - **Web** is a UI preview: recording is simulated and transcription is unavailable.
 - While a long recording is being transcribed in the background, the live preview of a new recording
-  stays empty until that job finishes (the engine runs one job at a time).
+  pauses until that job finishes (the engine runs one job at a time); text for audio the preview had to
+  skip is marked with `…`. The final transcript is always complete.
+- The live preview is **off with the Turbo model and on phones with less than 6 GB of RAM**, to keep
+  recording smooth. Those recordings are still transcribed after you stop.
+- **Recording with the screen off / in the background** needs, on Android, the *Recording audio*
+  notification (a microphone foreground service): allow notifications when asked (Android 13+). Without
+  it, or on Android 9 and older, keep the app open while recording. Background recording on a real phone
+  (Android and iOS) is still to be verified on device.
+- If the app is killed mid-recording, the take is restored on the next launch as **Recovered Recording**
+  (at most the last moments before the crash can be missing).
 - Speaker labels (who said what) are not supported.
 - **No cloud backup of recordings.** Android Auto Backup is enabled (Expo's default), but it backs up
   at most 25 MB per app and the app's files (speech models, WAV recordings) are far larger, so in

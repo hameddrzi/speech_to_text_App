@@ -26,6 +26,7 @@ import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
+import { livePreviewBlockReason } from '@/stt/live-preview';
 import { MODELS } from '@/stt/models';
 import { BYTES_PER_SECOND } from '@/stt/pcm';
 import {
@@ -129,7 +130,12 @@ export default function ProfileScreen() {
         {/* ── Transcription ── */}
         <SettingsSection
           header="Transcription"
-          footer="Speech is transcribed on this device with Whisper. Larger models are more accurate but slower and use more storage.">
+          footer={[
+            'Speech is transcribed on this device with Whisper. Larger models are more accurate but slower and use more storage.',
+            settings.liveTranscript ? livePreviewBlockReason(settings.speechModel) : null,
+          ]
+            .filter(Boolean)
+            .join(' ')}>
           <SettingsRow
             testID={TestIDs.profile.speechModelRow}
             icon="hardware-chip"

@@ -41,7 +41,8 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Voice needs the microphone to record your voice notes. Audio is transcribed on this device and never leaves your phone."
+          "microphonePermission": "Voice needs the microphone to record your voice notes. Audio is transcribed on this device and never leaves your phone.",
+          "enableBackgroundRecording": true
         }
       ],
       "expo-asset",

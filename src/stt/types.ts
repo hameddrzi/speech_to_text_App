@@ -42,3 +42,14 @@ export class TranscriptionCancelledError extends Error {
     this.name = 'TranscriptionCancelledError';
   }
 }
+
+/**
+ * Decoder settings for a quick PCM pass (the live preview). Same names as whisper.rn's TranscribeOptions:
+ * `maxThreads` CPU threads, `temperatureInc: 0` turns off the temperature-fallback retries, `bestOf`
+ * candidates for greedy sampling.
+ */
+export type PcmTuning = {
+  maxThreads?: number;
+  temperatureInc?: number;
+  bestOf?: number;
+};

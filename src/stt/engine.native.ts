@@ -20,6 +20,7 @@ import {
   TranscriptionCancelledError,
   type CancelSignal,
   type FileTranscribeRequest,
+  type PcmTuning,
   type SttRequest,
   type SttSegment,
 } from '@/stt/types';
@@ -230,12 +231,17 @@ export function transcribeFile(uri: string, req: FileTranscribeRequest): Promise
   });
 }
 
-/** Quick pass over a window of 16 kHz mono 16-bit PCM for the live preview. Null when the engine is busy. */
-export function transcribePcmIfIdle(pcm: Uint8Array, req: SttRequest): Promise<string | null> {
+/**
+ * Quick pass over a window of 16 kHz mono 16-bit PCM for the live preview. Null when the engine is busy.
+ * `tuning` overrides decoder settings for this pass only (e.g. fewer threads so recording stays smooth).
+ */
+export function transcribePcmIfIdle(pcm: Uint8Array, req: SttRequest, tuning?: PcmTuning): Promise<string | null> {
   return tryExclusive(async () => {
     const ctx = await getContext(req.model);
-    const buffer = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength) as ArrayBuffer;
-    const { promise } = ctx.transcribeData(buffer, OPTIONS);
+    // A snapshot that owns its whole buffer is passed as is; anything else is copied out once.
+    const whole = pcm.byteOffset === 0 && pcm.byteLength === pcm.buffer.byteLength;
+    const buffer = (whole ? pcm.buffer : pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength)) as ArrayBuffer;
+    const { promise } = ctx.transcribeData(buffer, { ...OPTIONS, ...tuning });
     const result = await promise;
     return cleanText(result.result);
   });
