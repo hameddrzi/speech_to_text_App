@@ -59,6 +59,8 @@ export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled
       accessibilityRole="switch"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: value, disabled }}
+      // react-native-web ignores accessibilityState; aria-checked reaches the DOM (native merges it into the state).
+      aria-checked={value}
       disabled={disabled}
       hitSlop={8}
       onPressIn={() => {

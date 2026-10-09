@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,8 +20,11 @@ import { Timing } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
 import {
   Colors,
+  ContentMaxWidth,
+  FontScaleCap,
   Radius,
   ScreenPadding,
+  ShortWindowHeight,
   Spacing,
   TabBarBottomGap,
   TabBarHeight,
@@ -38,6 +41,9 @@ import { formatTimer } from '@/utils/format';
 import { haptic } from '@/utils/haptics';
 
 const isWeb = Platform.OS === 'web';
+
+/** Landscape windows at least this wide put the stage and the controls side by side. */
+const TWO_COLUMN_MIN_WIDTH = 600;
 
 function nextRecordingTitle(recordings: Recording[]): string {
   let max = 0;
@@ -65,8 +71,12 @@ function toRecording(result: FinishedRecording, id: string, title: string): Reco
 
 export default function RecordScreen() {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { width: windowWidth, height: windowHeight } = useWindowDimensions();
   const compact = windowHeight < 720;
+  // Short windows (a phone in landscape, split screen; Android 16 ignores the portrait lock on large
+  // screens) scroll instead of pushing the controls under the tab bar. Wide ones also split into two columns.
+  const short = windowHeight < ShortWindowHeight;
+  const twoColumn = short && windowWidth >= TWO_COLUMN_MIN_WIDTH && windowWidth > windowHeight;
 
   const { recordings, addRecording } = useRecordings();
   const takeIdRef = useRef<string | null>(null);
@@ -173,104 +183,133 @@ export default function RecordScreen() {
 
   const showPermissionCard = permission === 'denied' || permission === 'blocked';
 
+  const header = (
+    <View style={styles.header}>
+      <View style={styles.headerText}>
+        <Text style={Type.largeTitle} accessibilityRole="header">
+          Record
+        </Text>
+        <FadeSwap swapKey={isActive ? 'take' : 'today'}>
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {isActive ? nextTitle : today}
+          </Text>
+        </FadeSwap>
+      </View>
+      <ModelPill disabled={isActive || busy} />
+    </View>
+  );
+
+  // Stage: timer + live waveform.
+  const stage = (
+    <View style={[styles.stage, short && styles.stageShort]}>
+      <View style={styles.timerBlock}>
+        <Animated.Text
+          testID={TestIDs.record.timer}
+          style={[styles.timer, compact && styles.timerCompact, timerStyle]}
+          maxFontSizeMultiplier={FontScaleCap.timer}
+          accessibilityRole="timer"
+          accessibilityLabel={`Elapsed ${Math.floor(elapsedMs / 1000)} seconds`}>
+          {formatTimer(elapsedMs)}
+        </Animated.Text>
+        <RecordStatus phase={phase} message={session.error ?? session.notice} simulated={session.simulated} />
+      </View>
+
+      <LiveWaveform
+        samples={samples}
+        phase={phase}
+        tickMs={RECORD_TICK_MS}
+        height={short ? 96 : compact ? 112 : 160}
+        hint="Tap the record button to begin"
+      />
+    </View>
+  );
+
+  // Transcript or permission prompt. The "Saved" toast appears over this card, which is idle after a save.
+  const transcript = (
+    <View>
+      {showPermissionCard ? (
+        <PermissionCard
+          blocked={permission === 'blocked'}
+          onAllow={onRecordPress}
+          onOpenSettings={session.openSettings}
+          onDismiss={session.dismissPermission}
+        />
+      ) : (
+        <LiveTranscriptCard text={liveTranscript} hint={transcriptHint} active={phase === 'recording'} compact={compact} />
+      )}
+      {toast ? (
+        <SavedToast key={toast.id} title={toast.title} onView={viewArchive} onDismiss={dismissToast} />
+      ) : null}
+    </View>
+  );
+
+  const controls = (
+    <Glass radius={Radius.xl} intensity={55} style={styles.controls}>
+      <ControlButton
+        testID={TestIDs.record.discard}
+        icon="trash-outline"
+        accessibilityLabel="Discard recording"
+        onPress={onDiscard}
+        disabled={!isActive}
+        color={Colors.record}
+      />
+      <RecordButton
+        testID={TestIDs.record.button}
+        recording={isActive || phase === 'saving'}
+        live={phase === 'recording'}
+        onPress={onRecordPress}
+        disabled={busy}
+        size={compact ? 70 : 78}
+        accessibilityLabel={isActive ? 'Stop and save recording' : 'Start recording'}
+      />
+      <ControlButton
+        testID={TestIDs.record.pauseResume}
+        icon={phase === 'paused' ? 'play' : 'pause'}
+        accessibilityLabel={phase === 'paused' ? 'Resume recording' : 'Pause recording'}
+        onPress={onPauseResume}
+        disabled={!isActive}
+        color={phase === 'paused' ? Colors.record : Colors.label}
+      />
+    </Glass>
+  );
+
+  const body = twoColumn ? (
+    // Landscape: timer + waveform on the left; transcript + controls on the right, kept above the tab bar.
+    <View style={styles.columns}>
+      <View style={styles.column}>{stage}</View>
+      <View style={[styles.column, styles.sideColumn]}>
+        {transcript}
+        {controls}
+      </View>
+    </View>
+  ) : (
+    <>
+      {stage}
+      {transcript}
+      {controls}
+    </>
+  );
+
+  const padding = { paddingTop: insets.top + (compact ? Spacing.sm : Spacing.lg), paddingBottom: bottomSpace };
+
   return (
     <View style={styles.screen}>
       <AmbientBackground variant="record" />
 
-      <View
-        style={[
-          styles.content,
-          { paddingTop: insets.top + (compact ? Spacing.sm : Spacing.lg), paddingBottom: bottomSpace },
-        ]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerText}>
-            <Text style={Type.largeTitle} accessibilityRole="header">
-              Record
-            </Text>
-            <FadeSwap swapKey={isActive ? 'take' : 'today'}>
-              <Text style={styles.subtitle} numberOfLines={1}>
-                {isActive ? nextTitle : today}
-              </Text>
-            </FadeSwap>
-          </View>
-          <ModelPill disabled={isActive || busy} />
+      {short ? (
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.content, styles.scrollContent, twoColumn && styles.contentWide, padding]}
+          showsVerticalScrollIndicator={false}>
+          {header}
+          {body}
+        </ScrollView>
+      ) : (
+        <View style={[styles.content, styles.fill, padding]}>
+          {header}
+          {body}
         </View>
-
-        {/* Stage: timer + live waveform */}
-        <View style={styles.stage}>
-          <View style={styles.timerBlock}>
-            <Animated.Text
-              testID={TestIDs.record.timer}
-              style={[styles.timer, compact && styles.timerCompact, timerStyle]}
-              accessibilityRole="timer"
-              accessibilityLabel={`Elapsed ${Math.floor(elapsedMs / 1000)} seconds`}>
-              {formatTimer(elapsedMs)}
-            </Animated.Text>
-            <RecordStatus phase={phase} message={session.error ?? session.notice} simulated={session.simulated} />
-          </View>
-
-          <LiveWaveform
-            samples={samples}
-            phase={phase}
-            tickMs={RECORD_TICK_MS}
-            height={compact ? 112 : 160}
-            hint="Tap the record button to begin"
-          />
-        </View>
-
-        {/* Transcript or permission prompt. The "Saved" toast appears over this card, which is idle after a save. */}
-        <View>
-          {showPermissionCard ? (
-            <PermissionCard
-              blocked={permission === 'blocked'}
-              onAllow={onRecordPress}
-              onOpenSettings={session.openSettings}
-              onDismiss={session.dismissPermission}
-            />
-          ) : (
-            <LiveTranscriptCard
-              text={liveTranscript}
-              hint={transcriptHint}
-              active={phase === 'recording'}
-              height={compact ? 38 : 64}
-            />
-          )}
-          {toast ? (
-            <SavedToast key={toast.id} title={toast.title} onView={viewArchive} onDismiss={dismissToast} />
-          ) : null}
-        </View>
-
-        {/* Controls */}
-        <Glass radius={Radius.xl} intensity={55} style={styles.controls}>
-          <ControlButton
-            testID={TestIDs.record.discard}
-            icon="trash-outline"
-            accessibilityLabel="Discard recording"
-            onPress={onDiscard}
-            disabled={!isActive}
-            color={Colors.record}
-          />
-          <RecordButton
-            testID={TestIDs.record.button}
-            recording={isActive || phase === 'saving'}
-            live={phase === 'recording'}
-            onPress={onRecordPress}
-            disabled={busy}
-            size={compact ? 70 : 78}
-            accessibilityLabel={isActive ? 'Stop and save recording' : 'Start recording'}
-          />
-          <ControlButton
-            testID={TestIDs.record.pauseResume}
-            icon={phase === 'paused' ? 'play' : 'pause'}
-            accessibilityLabel={phase === 'paused' ? 'Resume recording' : 'Pause recording'}
-            onPress={onPauseResume}
-            disabled={!isActive}
-            color={phase === 'paused' ? Colors.record : Colors.label}
-          />
-        </Glass>
-      </View>
-
+      )}
     </View>
   );
 }
@@ -281,12 +320,35 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   content: {
-    flex: 1,
     paddingHorizontal: ScreenPadding,
     gap: Spacing.lg,
     width: '100%',
-    maxWidth: 640,
+    maxWidth: ContentMaxWidth,
     alignSelf: 'center',
+  },
+  fill: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  contentWide: {
+    maxWidth: ContentMaxWidth * 1.5,
+  },
+  columns: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: Spacing.xl,
+  },
+  column: {
+    flex: 1,
+  },
+  sideColumn: {
+    justifyContent: 'flex-end',
+    gap: Spacing.lg,
   },
   header: {
     flexDirection: 'row',
@@ -306,6 +368,9 @@ const styles = StyleSheet.create({
     minHeight: 160,
     justifyContent: 'center',
     gap: Spacing.lg,
+  },
+  stageShort: {
+    gap: Spacing.md,
   },
   timerBlock: {
     alignItems: 'center',

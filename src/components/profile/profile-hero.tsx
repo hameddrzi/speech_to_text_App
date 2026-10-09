@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
@@ -56,7 +56,13 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
         </LinearGradient>
       </Glass>
 
-      <Text style={styles.name} accessibilityRole="header" numberOfLines={1}>
+      {/* Long names wrap to two centered lines; on native they shrink a little before they truncate. */}
+      <Text
+        style={[styles.name, (name?.length ?? 0) > LONG_NAME && styles.nameLong]}
+        accessibilityRole="header"
+        numberOfLines={2}
+        adjustsFontSizeToFit={Platform.OS !== 'web'}
+        minimumFontScale={0.75}>
         {name || 'Voice'}
       </Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
@@ -65,6 +71,7 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
         testID={TestIDs.profile.nameEdit}
         accessibilityRole="button"
         accessibilityLabel={name ? 'Edit name' : 'Add your name'}
+        hitSlop={6}
         onPress={onEdit}
         onPressIn={() => {
           scale.set(withTiming(PressScale.button, Timing.pressIn));
@@ -81,6 +88,9 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
     </View>
   );
 }
+
+/** Names longer than this start one size smaller (web has no adjustsFontSizeToFit). */
+const LONG_NAME = 24;
 
 const styles = StyleSheet.create({
   root: {
@@ -115,6 +125,10 @@ const styles = StyleSheet.create({
     fontSize: 26,
     marginTop: Spacing.md,
     maxWidth: '90%',
+    textAlign: 'center',
+  },
+  nameLong: {
+    fontSize: 22,
   },
   subtitle: {
     ...Type.subhead,

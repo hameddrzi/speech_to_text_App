@@ -2,6 +2,7 @@ import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-au
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Recording } from '@/data/recordings';
+import { useAudioSource } from '@/hooks/use-audio-source';
 
 export const PLAYBACK_RATES = [1, 1.5, 2] as const;
 export type PlaybackRate = (typeof PLAYBACK_RATES)[number];
@@ -23,6 +24,8 @@ export type Playback = {
   rate: PlaybackRate;
   /** True when a real audio file backs this playback (false = simulated clock for mock data). */
   isReal: boolean;
+  /** The recording has audio, but it can't be played (web: a temporary URL from an earlier visit). */
+  unavailable: boolean;
   play: () => void;
   pause: () => void;
   toggle: () => void;
@@ -67,8 +70,10 @@ export function usePlayback(
   recording: Recording | null | undefined,
   options?: { initialPosition?: number },
 ): Playback {
-  const uri = recording?.uri ?? null;
-  const isReal = !!uri;
+  const storedUri = recording?.uri ?? null;
+  // Native: the file URI itself. Web: a fresh object URL for the stored audio, once it's known to exist.
+  const { source: uri, missing: unavailable } = useAudioSource(storedUri);
+  const isReal = !!storedUri;
   const id = recording?.id ?? null;
   const initialPosition = options?.initialPosition ?? 0;
 
@@ -157,13 +162,15 @@ export function usePlayback(
 
   const play = useCallback(() => {
     if (isReal) {
+      // Web only: the source is still being resolved, or the audio is gone (the screen says so).
+      if (!uri) return;
       ensureAudioMode();
       if (status.currentTime >= duration - 0.1) safely(() => player.seekTo(0));
       safely(() => player.play());
     } else {
       setSim((prev) => ({ position: prev.position >= duration - 0.05 ? 0 : prev.position, playing: true }));
     }
-  }, [duration, isReal, player, status.currentTime]);
+  }, [duration, isReal, player, status.currentTime, uri]);
 
   const pause = useCallback(() => {
     if (isReal) {
@@ -183,5 +190,5 @@ export function usePlayback(
     [],
   );
 
-  return { position, duration, playing, rate, isReal, play, pause, toggle, seek, skip, setRate, cycleRate };
+  return { position, duration, playing, rate, isReal, unavailable, play, pause, toggle, seek, skip, setRate, cycleRate };
 }

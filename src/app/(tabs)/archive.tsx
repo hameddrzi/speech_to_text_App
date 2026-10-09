@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
   Extrapolation,
@@ -23,7 +23,16 @@ import { SegmentedControl } from '@/components/archive/segmented-control';
 import { Glass } from '@/components/glass';
 import { Travel, useMotion } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
+import {
+  Colors,
+  ContentMaxWidth,
+  ScreenPadding,
+  ShortWindowHeight,
+  Spacing,
+  TabBarBottomGap,
+  TabBarHeight,
+  Type,
+} from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
 import { retryPatch } from '@/stt/job-recovery';
@@ -91,6 +100,8 @@ function summary(list: Recording[]): string {
 
 export default function ArchiveScreen() {
   const insets = useSafeAreaInsets();
+  // Short windows (landscape) get a smaller empty state, so it starts above the tab bar.
+  const short = useWindowDimensions().height < ShortWindowHeight;
   const { recordings, deleteRecording, toggleFavorite, updateRecording } = useRecordings();
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -183,11 +194,10 @@ export default function ArchiveScreen() {
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingTop: insets.top + Spacing.sm,
-          paddingBottom: bottomSpace,
-          paddingHorizontal: ScreenPadding,
-        }}
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + Spacing.sm, paddingBottom: bottomSpace },
+        ]}
         ListHeaderComponent={
           <View style={styles.header}>
             <Animated.View style={[styles.largeTitleWrap, largeTitleStyle]}>
@@ -208,6 +218,7 @@ export default function ArchiveScreen() {
             key={recordings.length === 0 ? 'empty' : emptyKind}
             kind={recordings.length === 0 ? 'empty' : emptyKind}
             query={query}
+            compact={short}
           />
         }
         renderItem={({ item, index }) =>
@@ -247,6 +258,12 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  content: {
+    paddingHorizontal: ScreenPadding,
+    width: '100%',
+    maxWidth: ContentMaxWidth,
+    alignSelf: 'center',
   },
   header: {
     paddingBottom: Spacing.lg,

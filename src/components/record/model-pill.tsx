@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { Glass } from '@/components/glass';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontScaleCap, Radius, Spacing } from '@/constants/theme';
 import { useSettings } from '@/store/settings';
 import { STT_SUPPORTED } from '@/stt/model-files';
 import { modelInfo } from '@/stt/models';
@@ -48,7 +48,9 @@ export function ModelPill({ disabled }: { disabled?: boolean }) {
       style={({ pressed }) => [{ opacity: disabled ? 0.4 : pressed ? 0.6 : 1 }]}>
       <Glass radius={Radius.pill} intensity={50} strong elevated={false} style={styles.pill}>
         <Ionicons name={icon} size={13} color={color} />
-        <Text style={[styles.text, { color }]}>{text}</Text>
+        <Text style={[styles.text, { color }]} maxFontSizeMultiplier={FontScaleCap.chip}>
+          {text}
+        </Text>
       </Glass>
     </Pressable>
   );

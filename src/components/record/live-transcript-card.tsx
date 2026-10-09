@@ -1,6 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, {
   cancelAnimation,
   useAnimatedStyle,
@@ -24,9 +24,16 @@ type Props = {
   hint?: string;
   /** True while audio is being captured (shows "Listening…"). */
   active: boolean;
-  /** Fixed body height so the layout never jumps as text streams in. */
-  height?: number;
+  /** Short screens: the body starts at two lines instead of three. */
+  compact?: boolean;
 };
+
+/** Line height of the streaming text, at 100 % system text size. */
+const BODY_LINE_HEIGHT = 22;
+/** The body never shrinks below this many lines (so short hints don't make the card jump)… */
+const MIN_LINES = { compact: 2, regular: 3 } as const;
+/** …and grows with its content up to this many, then scrolls. */
+const MAX_LINES = 4;
 
 /**
  * Index where `next` stops matching `prev`, moved back to the start of that word. Whisper's rolling
@@ -83,9 +90,15 @@ function StreamingText({ text }: { text: string }) {
  * Frosted card where live speech-to-text will stream.
  * The STT core only needs to feed `text` (and `active`); the card handles scrolling and empty states.
  */
-export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
+export function LiveTranscriptCard({ text, active, hint, compact = false }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const hasText = text.trim().length > 0;
+  // The body sizes to its content between a min and a max, measured in lines of the *scaled* text, so a
+  // hint or a few words always fit at any system text size. Past the max it scrolls.
+  const { fontScale } = useWindowDimensions();
+  const line = BODY_LINE_HEIGHT * fontScale;
+  const minHeight = Math.ceil(line * (compact ? MIN_LINES.compact : MIN_LINES.regular));
+  const maxHeight = Math.ceil(line * MAX_LINES);
   const placeholder = active
     ? (hint ?? 'Listening… your words will appear here in a moment.')
     : (hint ?? 'Your words will appear here live while you record.');
@@ -107,9 +120,12 @@ export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
 
       <ScrollView
         ref={scrollRef}
-        style={{ height }}
+        style={[styles.scroll, { minHeight, maxHeight }]}
         showsVerticalScrollIndicator={false}
-        onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
+        // Follow live text as it grows; a static hint stays at the top.
+        onContentSizeChange={() => {
+          if (hasText) scrollRef.current?.scrollToEnd({ animated: true });
+        }}>
         {hasText ? (
           <StreamingText text={text} />
         ) : (
@@ -199,9 +215,12 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: Colors.record,
   },
+  scroll: {
+    flexGrow: 0,
+  },
   body: {
     ...Type.callout,
-    lineHeight: 22,
+    lineHeight: BODY_LINE_HEIGHT,
   },
   transparent: {
     color: 'transparent',

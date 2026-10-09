@@ -10,6 +10,8 @@ import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 type Props = {
   kind: 'empty' | 'no-results' | 'no-favorites' | 'no-transcripts';
   query?: string;
+  /** Short windows (landscape): no illustration and tighter padding, so the message sits above the tab bar. */
+  compact?: boolean;
 };
 
 const COPY: Record<Props['kind'], { icon: keyof typeof Ionicons.glyphMap; title: string; body: string }> = {
@@ -30,31 +32,34 @@ const COPY: Record<Props['kind'], { icon: keyof typeof Ionicons.glyphMap; title:
 const BARS = [0.35, 0.6, 0.9, 0.55, 1, 0.7, 0.4, 0.8, 0.5, 0.3];
 
 /** Glass "illustration" card: a stacked waveform plate with a floating glass badge. */
-export function EmptyState({ kind, query = '' }: Props) {
+export function EmptyState({ kind, query = '', compact = false }: Props) {
   const copy = COPY[kind];
   const { reduced } = useMotion();
   return (
     // Keyed by kind in the list, so switching filters into another empty state also eases in.
     <Animated.View
       testID={TestIDs.archive.emptyState}
-      entering={riseIn(reduced, { duration: Duration.slow, distance: Travel.empty })} style={styles.wrap}>
-      <Glass strong radius={Radius.xl} style={styles.card}>
-        <View style={styles.art}>
-          <Glass radius={Radius.lg} elevated={false} style={[styles.plate, styles.plateBack]} />
-          <Glass radius={Radius.lg} style={styles.plate}>
-            <View style={styles.bars}>
-              {BARS.map((h, i) => (
-                <View
-                  key={i}
-                  style={[styles.bar, { height: 8 + h * 34, opacity: 0.35 + h * 0.5 }]}
-                />
-              ))}
-            </View>
-          </Glass>
-          <Glass radius={Radius.pill} style={styles.badge}>
-            <Ionicons name={copy.icon} size={20} color={kind === 'empty' ? Colors.record : Colors.tint} />
-          </Glass>
-        </View>
+      entering={riseIn(reduced, { duration: Duration.slow, distance: Travel.empty })}
+      style={[styles.wrap, compact && styles.wrapCompact]}>
+      <Glass strong radius={Radius.xl} style={[styles.card, compact && styles.cardCompact]}>
+        {compact ? null : (
+          <View style={styles.art}>
+            <Glass radius={Radius.lg} elevated={false} style={[styles.plate, styles.plateBack]} />
+            <Glass radius={Radius.lg} style={styles.plate}>
+              <View style={styles.bars}>
+                {BARS.map((h, i) => (
+                  <View
+                    key={i}
+                    style={[styles.bar, { height: 8 + h * 34, opacity: 0.35 + h * 0.5 }]}
+                  />
+                ))}
+              </View>
+            </Glass>
+            <Glass radius={Radius.pill} style={styles.badge}>
+              <Ionicons name={copy.icon} size={20} color={kind === 'empty' ? Colors.record : Colors.tint} />
+            </Glass>
+          </View>
+        )}
         <Text style={styles.title}>{copy.title}</Text>
         <Text style={styles.body}>{copy.body.replace('%q', query.trim())}</Text>
       </Glass>
@@ -66,10 +71,16 @@ const styles = StyleSheet.create({
   wrap: {
     paddingTop: Spacing.xxl,
   },
+  wrapCompact: {
+    paddingTop: 0,
+  },
   card: {
     alignItems: 'center',
     paddingVertical: Spacing.xxxl,
     paddingHorizontal: Spacing.xxl,
+  },
+  cardCompact: {
+    paddingVertical: Spacing.lg,
   },
   art: {
     width: 170,

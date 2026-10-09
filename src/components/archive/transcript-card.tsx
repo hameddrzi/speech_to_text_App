@@ -133,6 +133,7 @@ function Notice({
           haptic.light();
           onAction();
         }}
+        hitSlop={4}
         accessibilityRole="button"
         accessibilityLabel={action}
         style={({ pressed }) => [styles.noticeButton, pressed && { opacity: 0.7 }]}>

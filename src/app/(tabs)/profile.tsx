@@ -23,7 +23,16 @@ import { SEPARATOR_INSET, SettingsRow, SettingsSection } from '@/components/prof
 import { useModelDownload } from '@/stt/use-model-download';
 import { Duration } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
+import {
+  Colors,
+  ContentMaxWidth,
+  Radius,
+  ScreenPadding,
+  Spacing,
+  TabBarBottomGap,
+  TabBarHeight,
+  Type,
+} from '@/constants/theme';
 import { transcriptText } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
 import { livePreviewBlockReason } from '@/stt/live-preview';
@@ -226,6 +235,7 @@ export default function ProfileScreen() {
             iconColor={Colors.record}
             title="Live Transcript"
             subtitle="Show text while recording"
+            labelledByAccessory
             accessory={
               <GlassSwitch
                 testID={TestIDs.profile.liveTranscriptSwitch}
@@ -246,6 +256,7 @@ export default function ProfileScreen() {
             icon="pulse"
             iconColor="#FF2D55"
             title="Haptics"
+            labelledByAccessory
             accessory={
               <GlassSwitch
                 testID={TestIDs.profile.hapticsSwitch}
@@ -379,6 +390,9 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: ScreenPadding,
+    width: '100%',
+    maxWidth: ContentMaxWidth,
+    alignSelf: 'center',
   },
   largeTitle: {
     ...Type.largeTitle,

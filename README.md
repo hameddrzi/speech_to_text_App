@@ -232,7 +232,11 @@ The `android/` and `ios/` folders are generated (see `.gitignore`); `npx expo ru
 
 - **iOS** has not been built or tested on a device yet.
 - **English only.** Transcription always runs with Whisper's language set to English.
-- **Web** is a UI preview: recording is simulated and transcription is unavailable.
+- **Web** is a UI preview: transcription is unavailable, and recording falls back to a simulated waveform when the
+  browser has no microphone. Recorded web audio is kept in the browser's IndexedDB; recordings made with older
+  versions (before this was added) show *audio no longer available*.
+- Landscape and short-window layouts, hit areas grown with `hitSlop`, and the font-scaling caps were verified in the
+  web build (with emulated text scaling); they still need a pass on real Android / iOS devices with large system text.
 - While a long recording is being transcribed in the background, the live preview of a new recording
   pauses until that job finishes (the engine runs one job at a time); text for audio the preview had to
   skip is marked with `…`. The final transcript is always complete.

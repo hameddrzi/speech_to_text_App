@@ -13,6 +13,8 @@ type Props = {
   placeholder?: string;
 };
 
+const CLEAR_PAD = 10;
+
 /** Frosted iOS-style search field. */
 export function SearchField({ value, onChangeText, placeholder = 'Search' }: Props) {
   return (
@@ -35,7 +37,10 @@ export function SearchField({ value, onChangeText, placeholder = 'Search' }: Pro
           <Pressable
             testID={TestIDs.archive.searchClear}
             onPress={() => onChangeText('')}
-            hitSlop={10}
+            // Padding (cancelled by a negative margin) gives a 37 pt box inside the 38 pt field on every
+            // platform; the slop takes it to 45 pt where hitSlop is supported.
+            hitSlop={4}
+            style={styles.clear}
             accessibilityRole="button"
             accessibilityLabel="Clear search">
             <Ionicons name="close-circle" size={17} color={Colors.labelTertiary} />
@@ -54,6 +59,10 @@ const styles = StyleSheet.create({
     gap: Spacing.xs + 2,
     paddingHorizontal: Spacing.sm + 2,
     backgroundColor: 'rgba(118,118,128,0.08)',
+  },
+  clear: {
+    padding: CLEAR_PAD,
+    margin: -CLEAR_PAD,
   },
   input: {
     // Positioned so it paints above the Glass blur layer on web (static inputs render beneath it).

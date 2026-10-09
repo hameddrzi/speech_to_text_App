@@ -73,6 +73,11 @@ type RowProps = {
   chevron?: boolean;
   destructive?: boolean;
   accessibilityHint?: string;
+  /**
+   * The accessory is a labelled control (a switch) that names the setting itself: the row's title and
+   * subtitle are hidden from screen readers so the label isn't read twice.
+   */
+  labelledByAccessory?: boolean;
   children?: ReactNode;
   testID?: string;
 };
@@ -89,6 +94,7 @@ export function SettingsRow({
   chevron,
   destructive,
   accessibilityHint,
+  labelledByAccessory,
   children,
   testID,
 }: RowProps) {
@@ -106,8 +112,13 @@ export function SettingsRow({
     <>
       <View style={styles.row}>
         <IconTile name={icon} color={iconColor} />
-        <View style={styles.titleWrap}>
-          <Text style={[styles.title, destructive && { color: Colors.record }]} numberOfLines={1}>
+        <View
+          style={styles.titleWrap}
+          accessibilityElementsHidden={labelledByAccessory}
+          importantForAccessibility={labelledByAccessory ? 'no-hide-descendants' : 'auto'}
+          aria-hidden={labelledByAccessory || undefined}>
+          {/* Titles wrap to a second line before they truncate; the trailing value gives way first. */}
+          <Text style={[styles.title, destructive && { color: Colors.record }]} numberOfLines={2}>
             {title}
           </Text>
           {subtitle ? (
@@ -201,6 +212,8 @@ const styles = StyleSheet.create({
   },
   titleWrap: {
     flex: 1,
+    // Keeps at least a word or two of the title when the value is long.
+    minWidth: '35%',
     justifyContent: 'center',
   },
   title: {
@@ -214,10 +227,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    maxWidth: '55%',
+    maxWidth: '40%',
+    flexShrink: 1,
   },
   value: {
     ...Type.body,
     color: Colors.labelSecondary,
+    flexShrink: 1,
   },
 });

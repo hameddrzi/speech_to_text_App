@@ -22,7 +22,16 @@ import { SKIP_SECONDS, usePlayback } from '@/components/archive/use-playback';
 import { WaveformScrubber } from '@/components/archive/waveform-scrubber';
 import { Glass } from '@/components/glass';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, ScreenPadding, Shadow, Spacing, Type } from '@/constants/theme';
+import {
+  Colors,
+  ContentMaxWidth,
+  Radius,
+  ScreenPadding,
+  Shadow,
+  ShortWindowHeight,
+  Spacing,
+  Type,
+} from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
 import { cancelPatch, retryPatch } from '@/stt/job-recovery';
@@ -106,6 +115,7 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
       accessibilityRole="button"
       accessibilityLabel={`${title}. Rename`}
       accessibilityHint="Double tap to edit the title"
+      hitSlop={4}
       style={styles.titleRow}>
       {/* The pencil is nested in the text so it follows the last line instead of drifting right on wrap. */}
       <Text style={styles.title}>
@@ -120,6 +130,8 @@ function EditableTitle({ title, onRename }: { title: string; onRename: (title: s
 function RecordingDetail({ recording, initialPosition }: { recording: Recording; initialPosition: number }) {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
+  // Short windows (landscape): a one-row player, so the transcript keeps most of the screen.
+  const compactDock = windowHeight < ShortWindowHeight;
   const { updateRecording, toggleFavorite, deleteRecording } = useRecordings();
   const pb = usePlayback(recording, { initialPosition });
   const { pause } = pb;
@@ -196,6 +208,17 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
     updateRecording(recording.id, cancelPatch());
   }, [recording.id, updateRecording]);
 
+  const positionText = (
+    <Text testID={TestIDs.detail.position} style={styles.time}>
+      {formatDuration(shownTime)}
+    </Text>
+  );
+  const remainingText = (
+    <Text testID={TestIDs.detail.remaining} style={styles.time}>
+      -{formatDuration(duration - shownTime)}
+    </Text>
+  );
+
   const onDelete = async () => {
     haptic.warning();
     if (!(await confirmDelete(recording.title))) return;
@@ -215,11 +238,10 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingTop: insets.top + HEADER_HEIGHT + Spacing.sm,
-          paddingBottom: dockHeight + Spacing.xl,
-          paddingHorizontal: ScreenPadding,
-        }}>
+        contentContainerStyle={[
+          styles.content,
+          { paddingTop: insets.top + HEADER_HEIGHT + Spacing.sm, paddingBottom: dockHeight + Spacing.xl },
+        ]}>
         <EditableTitle title={recording.title} onRename={(title) => updateRecording(recording.id, { title })} />
         <Text testID={TestIDs.detail.meta} style={styles.meta}>
           {formatRecordingDate(recording.createdAt)} · {formatDuration(recording.duration)}
@@ -241,46 +263,61 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
       <View
         style={[styles.dockWrap, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}
         onLayout={(e) => setDockHeight(e.nativeEvent.layout.height)}>
-        <Glass strong radius={Radius.xl} intensity={70} style={styles.dock}>
+        <Glass strong radius={Radius.xl} intensity={70} style={[styles.dock, compactDock && styles.dockCompact]}>
           <WaveformScrubber
             testID={TestIDs.detail.scrubber}
             waveform={recording.waveform}
             progress={progress}
             playing={pb.playing}
             variant="large"
-            height={48}
+            height={compactDock ? 30 : 48}
             barWidth={2.5}
             gap={2}
             onScrub={setScrub}
             onSeek={onSeek}
             accessibilityValueText={`${formatDuration(shownTime)} of ${formatDuration(duration)}`}
           />
-          <View style={styles.times}>
-            <Text testID={TestIDs.detail.position} style={styles.time}>
-              {formatDuration(shownTime)}
-            </Text>
-            <Text testID={TestIDs.detail.remaining} style={styles.time}>
-              -{formatDuration(duration - shownTime)}
-            </Text>
-          </View>
-          <View style={styles.controls}>
-            <View style={styles.side}>
+          {pb.unavailable ? (
+            <View style={styles.unavailable} accessibilityLiveRegion="polite">
+              <Ionicons name="alert-circle-outline" size={14} color={Colors.warningText} />
+              <Text style={styles.unavailableText} numberOfLines={2}>
+                This recording’s audio is no longer available in this browser.
+              </Text>
+            </View>
+          ) : null}
+          {compactDock ? null : (
+            <View style={styles.times}>
+              {positionText}
+              {remainingText}
+            </View>
+          )}
+          <View style={[styles.controls, compactDock && styles.controlsCompact]}>
+            <View style={[styles.side, compactDock && styles.sideCompact]}>
               <SpeedPill testID={TestIDs.detail.speed} rate={pb.rate} onPress={pb.cycleRate} />
+              {compactDock ? positionText : null}
             </View>
             <SkipButton
               testID={TestIDs.detail.skipBack}
               direction="back"
               onPress={() => pb.skip(-SKIP_SECONDS)}
-              size={30}
+              size={compactDock ? 26 : 30}
             />
-            <PlayButton testID={TestIDs.detail.play} large playing={pb.playing} onPress={pb.toggle} />
+            <PlayButton
+              testID={TestIDs.detail.play}
+              large
+              size={compactDock ? 52 : undefined}
+              disabled={pb.unavailable}
+              playing={pb.playing}
+              onPress={pb.toggle}
+            />
             <SkipButton
               testID={TestIDs.detail.skipForward}
               direction="forward"
               onPress={() => pb.skip(SKIP_SECONDS)}
-              size={30}
+              size={compactDock ? 26 : 30}
             />
-            <View style={[styles.side, styles.sideRight]}>
+            <View style={[styles.side, styles.sideRight, compactDock && [styles.sideCompact, styles.sideCompactRight]]}>
+              {compactDock ? remainingText : null}
               <GlassIconButton
                 testID={TestIDs.detail.favorite}
                 icon={recording.favorite ? 'star' : 'star-outline'}
@@ -304,45 +341,47 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           <Glass radius={0} elevated={false} intensity={60} strong style={StyleSheet.absoluteFill} />
           <View style={styles.hairline} />
         </Animated.View>
-        <GlassIconButton
-          testID={TestIDs.detail.back}
-          icon="chevron-back"
-          label="Back"
-          size={38}
-          iconSize={20}
-          onPress={goBack}
-        />
-        <Animated.Text numberOfLines={1} style={[styles.headerTitle, headerTitleStyle]}>
-          {recording.title}
-        </Animated.Text>
-        <GlassIconButton
-          testID={TestIDs.detail.export}
-          icon="download-outline"
-          label="Export transcript"
-          size={38}
-          iconSize={18}
-          onPress={() => {
-            haptic.selection();
-            setExportOpen(true);
-          }}
-        />
-        <GlassIconButton
-          testID={TestIDs.detail.share}
-          icon="share-outline"
-          label="Share"
-          size={38}
-          iconSize={18}
-          onPress={() => shareRecording(recording)}
-        />
-        <GlassIconButton
-          testID={TestIDs.detail.delete}
-          icon="trash-outline"
-          label="Delete recording"
-          color={Colors.record}
-          size={38}
-          iconSize={18}
-          onPress={onDelete}
-        />
+        <View style={styles.headerRow}>
+          <GlassIconButton
+            testID={TestIDs.detail.back}
+            icon="chevron-back"
+            label="Back"
+            size={38}
+            iconSize={20}
+            onPress={goBack}
+          />
+          <Animated.Text numberOfLines={1} style={[styles.headerTitle, headerTitleStyle]}>
+            {recording.title}
+          </Animated.Text>
+          <GlassIconButton
+            testID={TestIDs.detail.export}
+            icon="download-outline"
+            label="Export transcript"
+            size={38}
+            iconSize={18}
+            onPress={() => {
+              haptic.selection();
+              setExportOpen(true);
+            }}
+          />
+          <GlassIconButton
+            testID={TestIDs.detail.share}
+            icon="share-outline"
+            label="Share"
+            size={38}
+            iconSize={18}
+            onPress={() => shareRecording(recording)}
+          />
+          <GlassIconButton
+            testID={TestIDs.detail.delete}
+            icon="trash-outline"
+            label="Delete recording"
+            color={Colors.record}
+            size={38}
+            iconSize={18}
+            onPress={onDelete}
+          />
+        </View>
       </View>
 
       <ExportSheet visible={exportOpen} recording={recording} onClose={() => setExportOpen(false)} />
@@ -385,11 +424,24 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  content: {
+    paddingHorizontal: ScreenPadding,
+    width: '100%',
+    maxWidth: ContentMaxWidth,
+    alignSelf: 'center',
+  },
   header: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
+  },
+  // The bar's glass stays full-bleed; its buttons and title line up with the content column.
+  headerRow: {
+    flex: 1,
+    width: '100%',
+    maxWidth: ContentMaxWidth + Spacing.lg * 2,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
@@ -435,10 +487,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.md,
   },
   dock: {
+    width: '100%',
+    maxWidth: ContentMaxWidth,
+    alignSelf: 'center',
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
     paddingBottom: Spacing.md,
     ...Shadow.lifted,
+  },
+  dockCompact: {
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+  },
+  unavailable: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.xs,
+  },
+  unavailableText: {
+    ...Type.footnote,
+    flex: 1,
+    color: Colors.warningText,
   },
   times: {
     flexDirection: 'row',
@@ -455,8 +525,21 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginTop: Spacing.xs,
   },
+  controlsCompact: {
+    marginTop: Spacing.xxs,
+  },
   side: {
     width: 56,
+  },
+  // Compact dock: the elapsed / remaining times sit next to the speed pill and the star.
+  sideCompact: {
+    width: 120,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  sideCompactRight: {
+    justifyContent: 'flex-end',
   },
   sideRight: {
     alignItems: 'flex-end',

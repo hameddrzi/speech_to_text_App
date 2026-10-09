@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, Spacing, Type } from '@/constants/theme';
+import { Colors, Radius, Spacing, TextButtonHitArea, Type } from '@/constants/theme';
 
 type Props = {
   visible: boolean;
@@ -38,7 +38,8 @@ export function NameSheet({ visible, name, onSave, onClose }: Props) {
           <Pressable
             testID={TestIDs.profile.nameCancel}
             onPress={onClose}
-            hitSlop={10}
+            hitSlop={6}
+            style={TextButtonHitArea}
             accessibilityRole="button"
             accessibilityLabel="Cancel">
             <Text style={styles.cancel}>Cancel</Text>
@@ -49,7 +50,8 @@ export function NameSheet({ visible, name, onSave, onClose }: Props) {
           <Pressable
             testID={TestIDs.profile.nameSave}
             onPress={save}
-            hitSlop={10}
+            hitSlop={6}
+            style={TextButtonHitArea}
             accessibilityRole="button"
             accessibilityLabel="Save name">
             <Text style={styles.save}>Save</Text>

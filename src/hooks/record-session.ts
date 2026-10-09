@@ -10,6 +10,7 @@ import { Linking, Platform } from 'react-native';
 
 import { dbToLevel, simulatedLevel, smoothLevel } from '@/components/record/waveform-utils';
 import type { SpeechModel } from '@/stt/models';
+import { persistWebAudio } from '@/utils/web-audio';
 
 export type RecordPhase = 'idle' | 'starting' | 'recording' | 'paused' | 'saving';
 export type MicPermission = 'undetermined' | 'granted' | 'denied' | 'blocked';
@@ -68,6 +69,7 @@ export function useRecordSession(_options: SessionOptions = {}) {
   const smoothRef = useRef(0);
   const counterRef = useRef(0);
   const simulatedRef = useRef(false);
+  const takeIdRef = useRef<string | null>(null);
 
   const currentElapsed = useCallback(() => {
     const seg = segmentStartRef.current;
@@ -116,8 +118,9 @@ export function useRecordSession(_options: SessionOptions = {}) {
     return () => clearInterval(id);
   }, [phase, recorder, currentElapsed]);
 
-  const start = useCallback(async (_opts?: StartOptions): Promise<boolean> => {
+  const start = useCallback(async (opts?: StartOptions): Promise<boolean> => {
     if (phase !== 'idle') return false;
+    takeIdRef.current = opts?.id ?? `rec-${Date.now()}`;
     setPhase('starting');
     setError(null);
     let sim = false;
@@ -181,15 +184,20 @@ export function useRecordSession(_options: SessionOptions = {}) {
     setPhase('recording');
   }, [phase, recorder]);
 
-  const finishRecorder = useCallback(async (): Promise<string | null> => {
-    if (simulatedRef.current) return null;
-    try {
-      await recorder.stop();
-    } catch {}
-    const uri = recorder.uri ?? null;
-    setAudioModeAsync({ allowsRecording: false }).catch(() => {});
-    return uri;
-  }, [recorder]);
+  /** Stops the recorder; with `keep`, copies the take into IndexedDB so it still plays after a reload. */
+  const finishRecorder = useCallback(
+    async (keep: boolean): Promise<string | null> => {
+      if (simulatedRef.current) return null;
+      try {
+        await recorder.stop();
+      } catch {}
+      const uri = recorder.uri ?? null;
+      setAudioModeAsync({ allowsRecording: false }).catch(() => {});
+      if (!uri || !keep || Platform.OS !== 'web') return uri;
+      return persistWebAudio(takeIdRef.current ?? `rec-${Date.now()}`, uri);
+    },
+    [recorder],
+  );
 
   /** Stops the session and hands back everything needed to build a `Recording`. */
   const stop = useCallback(async (): Promise<FinishedRecording | null> => {
@@ -198,7 +206,7 @@ export function useRecordSession(_options: SessionOptions = {}) {
     const levels = levelsRef.current.slice();
     segmentStartRef.current = null;
     setPhase('saving');
-    const uri = await finishRecorder();
+    const uri = await finishRecorder(true);
     resetSession();
     setPhase('idle');
     return { uri, durationMs, levels };
@@ -209,7 +217,7 @@ export function useRecordSession(_options: SessionOptions = {}) {
     if (phase !== 'recording' && phase !== 'paused') return;
     segmentStartRef.current = null;
     setPhase('saving');
-    await finishRecorder();
+    await finishRecorder(false);
     resetSession();
     setPhase('idle');
   }, [phase, finishRecorder, resetSession]);
