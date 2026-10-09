@@ -31,6 +31,15 @@ export type FinishedRecording = {
   levels: number[];
 };
 
+export type SessionOptions = {
+  /**
+   * Called with the finished take when it ends without the user pressing Stop: the screen unmounted
+   * mid-take, or (Android) "Stop" was tapped in the recording notification. The take is never discarded.
+   * Native only; the web preview has nothing worth keeping.
+   */
+  onAutoStop?: (result: FinishedRecording) => void;
+};
+
 /** Sampling interval for timer + waveform. One bar is appended per tick. */
 export const RECORD_TICK_MS = 60;
 /** Upper bound on bars kept in state for the live waveform (plenty for tablets). */
@@ -43,7 +52,7 @@ const RECORDING_OPTIONS: RecordingOptions = { ...RecordingPresets.HIGH_QUALITY, 
  * Owns permission, the expo-audio recorder, timer and metering → waveform samples, and falls back to a
  * simulated meter when the browser can't record, so the UI still demos. No live transcript on web.
  */
-export function useRecordSession() {
+export function useRecordSession(_options: SessionOptions = {}) {
   const recorder = useAudioRecorder(RECORDING_OPTIONS);
 
   const [phase, setPhase] = useState<RecordPhase>('idle');
@@ -219,6 +228,8 @@ export function useRecordSession() {
     liveText: '',
     simulated,
     error,
+    /** Non-fatal status for the current take (native only). */
+    notice: null as string | null,
     start,
     pause,
     resume,

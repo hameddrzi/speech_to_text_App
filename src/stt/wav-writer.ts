@@ -1,29 +1,19 @@
 import { Directory, File, FileMode, Paths } from 'expo-file-system';
 
-import { SAMPLE_RATE } from '@/stt/pcm';
+import { BYTES_PER_SECOND } from '@/stt/pcm';
+import { headerPatches, WAV_HEADER_BYTES, wavHeader } from '@/stt/wav-format';
 
-const HEADER_BYTES = 44;
+/**
+ * The header's length fields are rewritten after this much new audio. If the app is killed, the file is
+ * still a valid WAV covering all but the last ~2 s; orphan recovery then fixes the lengths from the file size.
+ */
+export const HEADER_PATCH_BYTES = 2 * BYTES_PER_SECOND;
 
-function wavHeader(dataBytes: number): Uint8Array {
-  const header = new Uint8Array(HEADER_BYTES);
-  const v = new DataView(header.buffer);
-  const ascii = (offset: number, s: string) => {
-    for (let i = 0; i < s.length; i++) header[offset + i] = s.charCodeAt(i);
-  };
-  ascii(0, 'RIFF');
-  v.setUint32(4, 36 + dataBytes, true);
-  ascii(8, 'WAVE');
-  ascii(12, 'fmt ');
-  v.setUint32(16, 16, true); // PCM chunk size
-  v.setUint16(20, 1, true); // PCM
-  v.setUint16(22, 1, true); // mono
-  v.setUint32(24, SAMPLE_RATE, true);
-  v.setUint32(28, SAMPLE_RATE * 2, true); // byte rate
-  v.setUint16(32, 2, true); // block align
-  v.setUint16(34, 16, true); // bits per sample
-  ascii(36, 'data');
-  v.setUint32(40, dataBytes, true);
-  return header;
+/** Names (without `.wav`) of files a WavWriter is writing right now; orphan recovery must leave them alone. */
+const activeNames = new Set<string>();
+
+export function isWavBeingWritten(name: string): boolean {
+  return activeNames.has(name);
 }
 
 export function recordingsDir(): Directory {
@@ -33,41 +23,74 @@ export function recordingsDir(): Directory {
 }
 
 /**
- * Streams 16 kHz mono PCM straight to documents/recordings/<name>.wav while recording,
- * so long takes never sit in memory. The header is patched with the real sizes on finish().
+ * Streams 16 kHz mono PCM straight to documents/recordings/<name>.wav while recording, so long takes
+ * never sit in memory. The header's two length fields are patched every ~2 s of audio (two 4-byte
+ * writes), so the file on disk is always a valid WAV up to the last patch even if the process dies;
+ * finish() writes the exact final lengths.
  */
 export class WavWriter {
   readonly file: File;
+  readonly name: string;
   private handle: ReturnType<File['open']>;
   private dataBytes = 0;
+  private patchedBytes = 0;
+  private closed = false;
 
   constructor(name: string) {
+    this.name = name;
     this.file = new File(recordingsDir(), `${name}.wav`);
     if (this.file.exists) this.file.delete();
     this.file.create();
     this.handle = this.file.open(FileMode.ReadWrite);
     this.handle.writeBytes(wavHeader(0));
+    activeNames.add(name);
   }
 
   append(pcm: Uint8Array): void {
+    if (this.closed) return;
     this.handle.writeBytes(pcm);
     this.dataBytes += pcm.byteLength;
+    if (this.dataBytes - this.patchedBytes >= HEADER_PATCH_BYTES) this.patchHeader();
   }
 
   get seconds(): number {
-    return this.dataBytes / (SAMPLE_RATE * 2);
+    return this.dataBytes / BYTES_PER_SECOND;
   }
 
-  /** Finalizes the header and closes the file; returns its uri. */
+  /** Rewrites the RIFF and data lengths in place, then returns to the end of the file. */
+  private patchHeader(): void {
+    try {
+      for (const [offset, bytes] of headerPatches(this.dataBytes)) {
+        this.handle.offset = offset;
+        this.handle.writeBytes(bytes);
+      }
+      this.patchedBytes = this.dataBytes;
+    } finally {
+      this.handle.offset = WAV_HEADER_BYTES + this.dataBytes;
+    }
+  }
+
+  /** Finalizes the header and closes the file; returns its uri. Safe to call twice. */
   finish(): string {
-    this.handle.offset = 0;
-    this.handle.writeBytes(wavHeader(this.dataBytes));
-    this.handle.close();
+    if (!this.closed) {
+      this.closed = true;
+      try {
+        this.handle.offset = 0;
+        this.handle.writeBytes(wavHeader(this.dataBytes));
+      } finally {
+        try {
+          this.handle.close();
+        } catch {}
+        activeNames.delete(this.name);
+      }
+    }
     return this.file.uri;
   }
 
   /** Closes and deletes the partial file. */
   discard(): void {
+    this.closed = true;
+    activeNames.delete(this.name);
     try {
       this.handle.close();
     } catch {}

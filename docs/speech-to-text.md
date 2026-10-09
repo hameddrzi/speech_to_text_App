@@ -24,11 +24,26 @@ whole recording at once, so it has more context and is more accurate.
 
 ### Live preview: `LiveTranscriber`
 
-- Every **1.5 s**, the current audio window is sent to Whisper (once there is at least 1 s of audio).
+- The current audio window is sent to Whisper (once there is at least 1 s of audio) at most every
+  **1.5 s**. The interval adapts: after each pass the next one waits `max(1.5 s, 1.5 × the last pass's
+  duration)`, so a slow phone is never kept at full load.
+- Preview passes use lighter decoder settings than the final transcript (`PREVIEW_TUNING`): 2 CPU threads
+  (`maxThreads`), greedy decoding with no temperature-fallback retries (`temperatureInc: 0`, `bestOf: 1`).
+  They are passed through the optional third argument of `transcribePcmIfIdle`.
 - When the window reaches **20 s**, its text is *committed*, the window is cleared, and a new one
   starts. This keeps each preview call short however long the recording is.
-- If the engine is still busy with the previous call, the tick is simply skipped (`transcribePcmIfIdle`).
+- If the engine is busy (the previous preview or a file transcription), the tick is skipped *before*
+  anything is copied (`isEngineBusy()`); `transcribePcmIfIdle` also returns `null` if it loses that race.
   The preview never queues up behind itself.
+- The window is capped at **30 s**. It only gets there when the engine stays busy (a long recording being
+  transcribed in the background): the oldest audio is then dropped, the newest 10 s kept, and the text
+  gets a `…` where the gap is. Memory stays bounded however long the engine is busy.
+- **Automatically off** with the **Turbo** model and on phones with **less than 6 GB of RAM**
+  (`livePreviewBlockReason` in `live-preview.ts`, using `expo-device`'s `totalMemory`, cut-off 5 GB reported
+  since "6 GB" phones report ~5.3–5.8 GB). The Live Transcript card and the Profile → Transcription footer
+  say why; the Profile switch keeps its value and applies again when the reason goes away.
+- JS timers don't run while an Android app is in the background, so the preview simply pauses there; the
+  WAV file keeps being written (it is driven by microphone events, not timers).
 - Pausing stops the ticks but keeps the text. The microphone stream stays open while paused and its
   audio is dropped: on Android, `@fugood/react-native-audio-pcm-stream` releases the recorder on
   `stop()`, so a later `start()` would capture nothing.
@@ -122,6 +137,11 @@ Microphone ──► base64 chunks ──► Uint8Array PCM ──┬─► WavW
 
 - On Android the microphone uses the `VOICE_RECOGNITION` audio source, which is tuned for speech.
 - The WAV is written in streaming mode, so a long recording never sits in memory.
+- The header's two length fields (bytes 4 and 40) are rewritten after every ~2 s of new audio, so the file
+  on disk is a valid WAV even if the app is killed mid-take. On the next launch `recover-orphans.ts` finds
+  any `rec-*.wav` that no recording points to, fixes its header from the real file size
+  (`data = size − 44`), and adds it as **Recovered Recording** (shorter than 0.5 s: deleted). Pure header
+  helpers live in `wav-format.ts`.
 - Size: about **1.9 MB per minute**.
 
 ## Models
@@ -196,4 +216,7 @@ Tips that help with any model:
 | *"Transcription stopped unexpectedly twice"* | The app was killed twice while transcribing this recording, usually out of memory on a phone with little RAM. Pick a smaller model (Small or Base) in **Profile → Transcription** and tap Retry. Long recordings resume from the last finished 5-minute chunk. |
 | Transcription takes too long | Open the recording and tap **Cancel**. It goes back to *No transcript yet*; tap Transcribe to start again, for example after switching to a smaller model. |
 | Live transcript stays empty | Check that *Live Transcript* is on and a model is downloaded. The first preview appears after about 1.5–3 s while the model loads. |
+| Live transcript card says it is off for Turbo / low memory | Expected: the preview is disabled with the Turbo model or under 6 GB of RAM. Switch to Small for a live preview; the final transcript is unaffected. |
+| Recording stops or goes silent with the screen off (Android) | The *Recording audio* notification must be allowed (Android 13+: Settings → Apps → Voice → Notifications). Without it the status line says *Keep Voice open while recording*. |
+| A **Recovered Recording** appears in the Archive | The app was closed or killed during a take; the audio up to that moment was restored and is transcribed like any other recording. |
 | App won't install (`not enough space`) | The phone's storage is full. Free 1–2 GB; models need space too. |
