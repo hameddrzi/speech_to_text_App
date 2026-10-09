@@ -26,6 +26,8 @@ type Props = {
   position: number;
   onSeek: (seconds: number) => void;
   onRetry: () => void;
+  /** Stops a running or queued transcription; shown as Cancel while transcribing. */
+  onCancel?: () => void;
   /** Called with the active segment's y offset inside the card whenever the highlighted segment changes. */
   onActiveSegmentChange?: (y: number) => void;
 };
@@ -142,7 +144,7 @@ function Notice({
 }
 
 /** Full-page, time-coded transcript for the recording screen; follows playback and seeks on tap. */
-export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveSegmentChange }: Props) {
+export function TranscriptCard({ recording, position, onSeek, onRetry, onCancel, onActiveSegmentChange }: Props) {
   const { transcript, transcriptStatus } = recording;
   const modelReady = useSelectedModelReady();
   const waitingForModel = transcriptStatus === 'processing' && !modelReady;
@@ -248,6 +250,22 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
                   ? 'Queued for transcription…'
                   : `Transcribing on device… ${Math.round(recording.transcriptProgress * 100)}%`}
               </Text>
+              <View style={styles.flex} />
+              {onCancel && (
+                <Pressable
+                  testID={TestIDs.detail.cancelTranscription}
+                  onPress={() => {
+                    haptic.light();
+                    onCancel();
+                  }}
+                  hitSlop={8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cancel transcription"
+                  style={({ pressed }) => [styles.cancel, pressed && { opacity: 0.6 }]}>
+                  <Ionicons name="close" size={15} color={Colors.record} />
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </Pressable>
+              )}
             </View>
             <SkeletonLines />
           </View>
@@ -352,6 +370,21 @@ const styles = StyleSheet.create({
   },
   processingText: {
     ...Type.subhead,
+    flexShrink: 1,
+  },
+  cancel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xxs,
+    height: 30,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.pill,
+    backgroundColor: Colors.recordSoft,
+  },
+  cancelText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.record,
   },
   skeleton: {
     gap: Spacing.md,

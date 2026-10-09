@@ -26,6 +26,7 @@ import { TestIDs } from '@/constants/test-ids';
 import { Colors, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
+import { retryPatch } from '@/stt/job-recovery';
 import { formatTotalTime } from '@/utils/format';
 
 type Filter = 'all' | 'favorites' | 'transcribed';
@@ -153,7 +154,7 @@ export default function ArchiveScreen() {
     (id: string) => {
       haptic.light();
       // The TranscriptionWorker picks up anything in 'processing' and runs it on device.
-      updateRecording(id, { transcriptStatus: 'processing', transcriptError: undefined });
+      updateRecording(id, retryPatch());
     },
     [updateRecording],
   );

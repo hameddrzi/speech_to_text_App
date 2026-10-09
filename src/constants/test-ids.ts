@@ -73,6 +73,7 @@ export const TestIDs = {
     segmentPrefix: 'transcript-segment-',
     noticeAction: 'transcript-notice-action',
     processing: 'transcript-processing',
+    cancelTranscription: 'transcript-cancel',
   },
 
   // Export sheet (detail → download button)
