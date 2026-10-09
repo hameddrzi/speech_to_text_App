@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { confirmDelete, shareRecording } from '@/components/archive/actions';
+import { ExportSheet } from '@/components/archive/export-sheet';
 import { haptic } from '@/utils/haptics';
 import { GlassIconButton, PlayButton, SkipButton, SpeedPill } from '@/components/archive/playback-controls';
 import { TranscriptCard } from '@/components/archive/transcript-card';
@@ -121,6 +122,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
   const [scrub, setScrub] = useState<number | null>(null);
   const [transcriptTop, setTranscriptTop] = useState(0);
   const [dockHeight, setDockHeight] = useState(200);
+  const [exportOpen, setExportOpen] = useState(false);
 
   useFocusEffect(useCallback(() => () => pause(), [pause]));
 
@@ -279,6 +281,16 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           {recording.title}
         </Animated.Text>
         <GlassIconButton
+          icon="download-outline"
+          label="Export transcript"
+          size={38}
+          iconSize={18}
+          onPress={() => {
+            haptic.selection();
+            setExportOpen(true);
+          }}
+        />
+        <GlassIconButton
           icon="share-outline"
           label="Share"
           size={38}
@@ -294,6 +306,8 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
           onPress={onDelete}
         />
       </View>
+
+      <ExportSheet visible={exportOpen} recording={recording} onClose={() => setExportOpen(false)} />
     </View>
   );
 }
