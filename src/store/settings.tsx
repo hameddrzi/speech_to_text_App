@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { formatBytes, MODELS, type SpeechModel } from '@/stt/models';
 import { setHapticsEnabled } from '@/utils/haptics';
-import { readJSON, writeJSON } from '@/utils/storage';
+import { readJSONWithStatus, writeJSON } from '@/utils/storage';
 
 export type { SpeechModel };
 
@@ -65,9 +65,14 @@ const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 const STORAGE_KEY = 'settings';
 
-/** Saved settings on top of the defaults. Keys from older versions (or of the wrong type) are dropped. */
+const isPlainObject = (v: unknown) => typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/**
+ * Saved settings on top of the defaults. Keys from older versions (or of the wrong type) are dropped.
+ * settings.json is written atomically; a damaged file is kept aside and the backup used (see storage.ts).
+ */
 function loadSettings(): AppSettings {
-  const saved = readJSON<Record<string, unknown>>(STORAGE_KEY) ?? {};
+  const saved = readJSONWithStatus<Record<string, unknown>>(STORAGE_KEY, isPlainObject).value ?? {};
   const settings: AppSettings = { ...DEFAULT_SETTINGS };
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof AppSettings)[]) {
     if (typeof saved[key] === typeof DEFAULT_SETTINGS[key]) Object.assign(settings, { [key]: saved[key] });

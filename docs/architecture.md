@@ -117,8 +117,38 @@ Everything is stored in the app's private document directory. Nothing is synced 
 | `models/ggml-*.bin` | Downloaded Whisper models |
 | `models/ggml-*.bin.part` | A model download in progress (renamed only when complete) |
 
-`src/utils/storage.ts` handles the JSON files. It uses `localStorage` on web, and a failed read
-returns `null` instead of throwing, so a corrupt file can never crash the app.
+`src/utils/storage.ts` handles the JSON files. It uses `localStorage` on web (where `setItem` is
+already atomic). On native, reads never throw and writes are crash-safe:
+
+| File | Meaning |
+|---|---|
+| `<name>.json.tmp` | The new content, written first |
+| `<name>.json.bak` | The previous good `<name>.json` |
+| `<name>.corrupt-<timestamp>.json` | A file that could not be parsed, kept for manual recovery |
+
+- **Write:** (1) write `.tmp`, (2) move `<name>.json` → `.bak`, (3) move `.tmp` → `<name>.json`.
+  expo-file-system has no atomic replace (`moveSync({ overwrite: true })` deletes the destination
+  first), so the rotation guarantees that a complete copy exists at every step.
+- **Read:** `<name>.json` if it parses. If it is missing: `.tmp` (a complete write whose last rename
+  did not happen), then `.bak`. If it is corrupt (unparseable, empty or the wrong shape): it is moved
+  aside to `<name>.corrupt-<timestamp>.json` first, then `.bak`, then `.tmp` are tried. A corrupt file is
+  never overwritten, and a write never runs before the file has been checked this session.
+- `readJSONWithStatus()` reports the source (`main`, `temp`, `backup`, `none`) and whether anything was
+  corrupt. The recordings store shows a one-time alert when it recovered data.
+- Writes skip the disk's `fsync` (the API has none), so a power cut right after a write could still
+  lose both copies on some file systems. A crashed or killed app is fully covered.
+
+The recordings store writes `recordings.json` at most every 400 ms (trailing), skips writes when
+nothing persistent changed, and flushes right away when the app goes to the background or the
+provider unmounts. `flush()` on `useRecordings()` forces a write before heavy native work. Volatile
+fields (`transcriptProgress`, or any other field ending in `Progress`) are never written. Settings are
+written immediately through the same atomic path.
+
+**Audio URIs are rebased on load.** `recordings.json` stores absolute `file://` URIs, but the iOS app
+container path (`…/Application/<UUID>/Documents`) changes with every app update.
+`resolveRecordingUri()` in `src/utils/recording-files.ts` keeps only the file name (`rec-<id>.wav`)
+and points it at the current `documents/recordings/` folder. The store does this for every recording
+on load and writes the fixed URIs back. Deleting audio uses it too. Web URIs are left unchanged.
 
 Deleting a recording also deletes its WAV file. The auto-delete policy never removes favorites.
 
