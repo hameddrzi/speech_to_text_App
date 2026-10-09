@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <g id="wave" fill="#FF3B30">
+    <rect x="216" y="412" width="60" height="200" rx="30"/>
+    <rect x="306" y="302" width="60" height="420" rx="30"/>
+    <rect x="396" y="362" width="60" height="300" rx="30"/>
+    <rect x="486" y="427" width="60" height="170" rx="30"/>
+  </g>
+  <g id="lines" fill="#0B0B0F">
+    <rect x="576" y="387" width="232" height="60" rx="30"/>
+    <rect x="576" y="482" width="202" height="60" rx="30"/>
+    <rect x="576" y="577" width="144" height="60" rx="30"/>
+  </g>
+</svg>

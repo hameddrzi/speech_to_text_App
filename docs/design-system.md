@@ -128,3 +128,10 @@ Shadow    soft (cards) · lifted (floating controls)
 4. **Red is reserved for recording and deleting.**
 5. **Test on Android as well as iOS.** Glass looks different on each.
 6. **Set accessibility labels and roles** on every custom control (see `record-button.tsx`).
+
+## App icon
+
+The icon (a red waveform turning into transcript lines) is drawn in `assets/icon/icon.svg`. Edit
+that file, then run `node scripts/export-icons.js` (needs Playwright + Chromium) to regenerate the
+layer SVGs, the iOS Icon Composer layers in `assets/expo.icon/` and every PNG in `assets/images/`.
+Rebuild the native apps afterwards (`npx expo prebuild --clean`).
