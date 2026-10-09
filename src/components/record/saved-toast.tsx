@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Timing, Travel, useMotion } from '@/constants/motion';
 import { Colors, Radius, Shadow, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -15,8 +16,9 @@ type Props = {
   top: number;
 };
 
-const SHOW = { duration: 220, easing: Easing.out(Easing.cubic) };
-const HIDE = { duration: 180, easing: Easing.in(Easing.cubic) };
+// Opacity-led timing curves (ease-out in, ease-in out); they keep running as a plain fade with reduced motion.
+const SHOW = { ...Timing.enter, reduceMotion: Timing.fade.reduceMotion };
+const HIDE = { ...Timing.exit, reduceMotion: Timing.fade.reduceMotion };
 
 /**
  * Floating glass confirmation shown after a take is saved, with a "View" shortcut to the archive.
@@ -24,6 +26,7 @@ const HIDE = { duration: 180, easing: Easing.in(Easing.cubic) };
  */
 export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: Props) {
   const shown = useSharedValue(0);
+  const lift = useMotion().distance(Travel.toast);
 
   useEffect(() => {
     shown.set(withTiming(1, SHOW));
@@ -46,7 +49,7 @@ export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: P
 
   const style = useAnimatedStyle(() => ({
     opacity: shown.get(),
-    transform: [{ translateY: (1 - shown.get()) * -12 }],
+    transform: [{ translateY: (1 - shown.get()) * -lift }],
   }));
 
   return (

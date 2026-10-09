@@ -11,6 +11,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/ambient-background';
+import { FadeSwap } from '@/components/fade-swap';
 import { Glass } from '@/components/glass';
 import { GlassSwitch } from '@/components/profile/glass-switch';
 import { NameSheet } from '@/components/profile/name-sheet';
@@ -20,6 +21,7 @@ import { ProfileStats } from '@/components/profile/profile-stats';
 import { ProgressBar } from '@/components/profile/progress-bar';
 import { SEPARATOR_INSET, SettingsRow, SettingsSection } from '@/components/profile/settings-list';
 import { useModelDownload } from '@/stt/use-model-download';
+import { Duration } from '@/constants/motion';
 import { Colors, Radius, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
@@ -63,14 +65,14 @@ export default function ProfileScreen() {
   // ── Large-title → compact header on scroll ──
   const scrollY = useSharedValue(0);
   const onScroll = useAnimatedScrollHandler((e) => {
-    scrollY.value = e.contentOffset.y;
+    scrollY.set(e.contentOffset.y);
   });
   const compactStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [28, 52], [0, 1], 'clamp'),
+    opacity: interpolate(scrollY.get(), [28, 52], [0, 1], 'clamp'),
   }));
   const largeTitleStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(scrollY.value, [0, 36], [1, 0], 'clamp'),
-    transform: [{ scale: interpolate(scrollY.value, [-120, 0], [1.12, 1], 'clamp') }],
+    opacity: interpolate(scrollY.get(), [0, 36], [1, 0], 'clamp'),
+    transform: [{ scale: interpolate(scrollY.get(), [-120, 0], [1.12, 1], 'clamp') }],
   }));
 
   // ── Derived values ──
@@ -138,68 +140,71 @@ export default function ProfileScreen() {
             }}
           />
 
-          {isDownloading ? (
-            <SettingsRow
-              icon="cloud-download"
-              iconColor={Colors.tint}
-              title={`Downloading ${model.label}…`}
-              subtitle={`${Math.round(download.progress * 100)}% of ${model.detail}`}
-              accessory={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Cancel download"
-                  hitSlop={10}
-                  onPress={() => {
-                    haptic.selection();
-                    download.cancel();
-                  }}>
-                  <Ionicons name="stop-circle" size={26} color={Colors.tint} />
-                </Pressable>
-              }>
-              <ProgressBar progress={download.progress} style={styles.inlineProgress} />
-            </SettingsRow>
-          ) : isDownloaded ? (
-            <SettingsRow
-              icon="checkmark-circle"
-              iconColor={Colors.success}
-              title="Model Ready"
-              subtitle={`${model.label} · ${model.detail} on device`}
-              accessory={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Remove ${model.label} model`}
-                  hitSlop={10}
-                  onPress={() =>
-                    Alert.alert(`Remove ${model.label} model?`, 'You can download it again at any time.', [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Remove', style: 'destructive', onPress: () => download.remove(model.value) },
-                    ])
-                  }>
-                  <Text style={styles.linkText}>Remove</Text>
-                </Pressable>
-              }
-            />
-          ) : (
-            <SettingsRow
-              icon="cloud-download"
-              iconColor={Colors.tint}
-              title={downloadError ? 'Download Failed' : 'Download Model'}
-              subtitle={downloadError ?? `${model.label} · ${model.detail} · needed to transcribe`}
-              accessory={
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Download ${model.label} model, ${model.detail}`}
-                  hitSlop={8}
-                  onPress={() => {
-                    haptic.light();
-                    download.start(model.value);
-                  }}
-                  style={({ pressed }) => [styles.getPill, pressed && { opacity: 0.6 }]}>
-                  <Text style={styles.getPillText}>GET</Text>
-                </Pressable>
-              }
-            />
-          )}
+          {/* Get → Downloading → Model Ready cross-fade instead of snapping. */}
+          <FadeSwap swapKey={isDownloading ? 'downloading' : isDownloaded ? 'ready' : 'get'} duration={Duration.base}>
+            {isDownloading ? (
+              <SettingsRow
+                icon="cloud-download"
+                iconColor={Colors.tint}
+                title={`Downloading ${model.label}…`}
+                subtitle={`${Math.round(download.progress * 100)}% of ${model.detail}`}
+                accessory={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel download"
+                    hitSlop={10}
+                    onPress={() => {
+                      haptic.selection();
+                      download.cancel();
+                    }}>
+                    <Ionicons name="stop-circle" size={26} color={Colors.tint} />
+                  </Pressable>
+                }>
+                <ProgressBar progress={download.progress} style={styles.inlineProgress} />
+              </SettingsRow>
+            ) : isDownloaded ? (
+              <SettingsRow
+                icon="checkmark-circle"
+                iconColor={Colors.success}
+                title="Model Ready"
+                subtitle={`${model.label} · ${model.detail} on device`}
+                accessory={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${model.label} model`}
+                    hitSlop={10}
+                    onPress={() =>
+                      Alert.alert(`Remove ${model.label} model?`, 'You can download it again at any time.', [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Remove', style: 'destructive', onPress: () => download.remove(model.value) },
+                      ])
+                    }>
+                    <Text style={styles.linkText}>Remove</Text>
+                  </Pressable>
+                }
+              />
+            ) : (
+              <SettingsRow
+                icon="cloud-download"
+                iconColor={Colors.tint}
+                title={downloadError ? 'Download Failed' : 'Download Model'}
+                subtitle={downloadError ?? `${model.label} · ${model.detail} · needed to transcribe`}
+                accessory={
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Download ${model.label} model, ${model.detail}`}
+                    hitSlop={8}
+                    onPress={() => {
+                      haptic.light();
+                      download.start(model.value);
+                    }}
+                    style={({ pressed }) => [styles.getPill, pressed && { opacity: 0.6 }]}>
+                    <Text style={styles.getPillText}>GET</Text>
+                  </Pressable>
+                }
+              />
+            )}
+          </FadeSwap>
 
           <SettingsRow
             icon="radio"

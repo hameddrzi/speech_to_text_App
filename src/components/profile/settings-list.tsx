@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Children, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Timing } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -95,8 +96,8 @@ export function SettingsRow({
   const animatedStyle = useAnimatedStyle(() => ({
     // interpolateColor, not a template string: a settling spring reaches values like 1e-8, and Android
     // crashes on a color such as "rgba(60,60,67,1e-8)".
-    backgroundColor: interpolateColor(pressed.value, [0, 1], ['rgba(60,60,67,0)', 'rgba(60,60,67,0.1)']),
-    transform: [{ scale: 1 - pressed.value * 0.012 }],
+    backgroundColor: interpolateColor(pressed.get(), [0, 1], ['rgba(60,60,67,0)', 'rgba(60,60,67,0.1)']),
+    transform: [{ scale: 1 - pressed.get() * 0.012 }],
   }));
 
   const content = (
@@ -146,10 +147,11 @@ export function SettingsRow({
       accessibilityHint={accessibilityHint}
       onPress={onPress}
       onPressIn={() => {
-        pressed.set(withTiming(1, { duration: 90 }));
+        pressed.set(withTiming(1, Timing.pressIn));
       }}
       onPressOut={() => {
-        pressed.set(withSpring(0, { damping: 18, stiffness: 220 }));
+        // Highlight in instantly, fade out gently (iOS Settings).
+        pressed.set(withTiming(0, Timing.pressOut));
       }}>
       <Animated.View style={animatedStyle}>{content}</Animated.View>
     </Pressable>

@@ -4,8 +4,8 @@ import { router } from 'expo-router';
 import { memo, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  FadeIn,
   interpolateColor,
+  LayoutAnimationConfig,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -13,6 +13,8 @@ import Animated, {
 
 import { haptic } from '@/utils/haptics';
 import { Shimmer } from '@/components/archive/shimmer';
+import { FadeSwap } from '@/components/fade-swap';
+import { Duration, fadeIn, Timing } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording, type TranscriptSegment } from '@/data/recordings';
 import { useSelectedModelReady } from '@/stt/use-model-download';
@@ -36,6 +38,10 @@ export function activeSegmentIndex(segments: TranscriptSegment[], position: numb
   return -1;
 }
 
+const SEGMENT_TEXT = 'rgba(60,60,67,0.78)';
+const HIGHLIGHT_OFF = 'rgba(10,132,255,0)';
+const HIGHLIGHT_ON = 'rgba(10,132,255,0.09)';
+
 const Segment = memo(function Segment({
   segment,
   active,
@@ -49,12 +55,19 @@ const Segment = memo(function Segment({
 }) {
   const a = useSharedValue(active ? 1 : 0);
 
+  // The highlight, timestamp and text color all move together as playback reaches a segment.
   useEffect(() => {
-    a.set(withTiming(active ? 1 : 0, { duration: 240 }));
+    a.set(withTiming(active ? 1 : 0, Timing.fade));
   }, [active, a]);
 
   const bg = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(a.get(), [0, 1], ['rgba(10,132,255,0)', 'rgba(10,132,255,0.09)']),
+    backgroundColor: interpolateColor(a.get(), [0, 1], [HIGHLIGHT_OFF, HIGHLIGHT_ON]),
+  }));
+  const stampColor = useAnimatedStyle(() => ({
+    color: interpolateColor(a.get(), [0, 1], [Colors.labelTertiary, Colors.tint]),
+  }));
+  const textColor = useAnimatedStyle(() => ({
+    color: interpolateColor(a.get(), [0, 1], [SEGMENT_TEXT, Colors.label]),
   }));
 
   return (
@@ -66,16 +79,8 @@ const Segment = memo(function Segment({
       accessibilityLabel={`${formatDuration(segment.start)}. ${segment.text}`}
       accessibilityHint="Plays from this point">
       <Animated.View style={[styles.segment, bg]}>
-        <Text style={[styles.stamp, active && styles.stampActive]}>
-          {formatDuration(segment.start)}
-        </Text>
-        <Text
-          style={[
-            styles.segmentText,
-            { color: active ? Colors.label : 'rgba(60,60,67,0.78)' },
-          ]}>
-          {segment.text}
-        </Text>
+        <Animated.Text style={[styles.stamp, stampColor]}>{formatDuration(segment.start)}</Animated.Text>
+        <Animated.Text style={[styles.segmentText, textColor]}>{segment.text}</Animated.Text>
       </Animated.View>
     </Pressable>
   );
@@ -110,7 +115,7 @@ function Notice({
   onAction: () => void;
 }) {
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={styles.notice}>
+    <Animated.View entering={fadeIn(Duration.base)} style={styles.notice}>
       <View style={[styles.noticeIcon, { backgroundColor: `${tint}1F` }]}>
         <Ionicons name={icon} size={22} color={tint} />
       </View>
@@ -166,107 +171,115 @@ export function TranscriptCard({ recording, position, onSeek, onRetry, onActiveS
 
   const done = transcriptStatus === 'done' && transcript.length > 0;
 
+  // Opening a recording shows its state at once; only later changes (e.g. Transcribing → transcript) fade in.
   return (
-    <View style={styles.page}>
-      <View style={styles.header}>
-        <Text style={styles.heading} accessibilityRole="header">
-          Transcript
-        </Text>
-        <View style={styles.flex} />
+    <LayoutAnimationConfig skipEntering>
+      <View style={styles.page}>
+        <View style={styles.header}>
+          <Text style={styles.heading} accessibilityRole="header">
+            Transcript
+          </Text>
+          <View style={styles.flex} />
+          {done && (
+            <Pressable
+              onPress={copy}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel={copied ? 'Copied' : 'Copy text'}
+              style={({ pressed }) => [styles.copy, pressed && { opacity: 0.6 }]}>
+              <FadeSwap swapKey={copied ? 'copied' : 'copy'} style={styles.copyInner}>
+                <Ionicons
+                  name={copied ? 'checkmark' : 'copy-outline'}
+                  size={15}
+                  color={copied ? Colors.success : Colors.tint}
+                />
+                <Text style={[styles.copyText, copied && { color: Colors.success }]}>
+                  {copied ? 'Copied' : 'Copy text'}
+                </Text>
+              </FadeSwap>
+            </Pressable>
+          )}
+        </View>
+
         {done && (
-          <Pressable
-            onPress={copy}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={copied ? 'Copied' : 'Copy text'}
-            style={({ pressed }) => [styles.copy, pressed && { opacity: 0.6 }]}>
-            <Ionicons
-              name={copied ? 'checkmark' : 'copy-outline'}
-              size={15}
-              color={copied ? Colors.success : Colors.tint}
-            />
-            <Text style={[styles.copyText, copied && { color: Colors.success }]}>
-              {copied ? 'Copied' : 'Copy text'}
-            </Text>
-          </Pressable>
+          <Animated.View
+            entering={fadeIn(Duration.slow)}
+            style={styles.list}
+            onLayout={(e) => (listY.current = e.nativeEvent.layout.y)}>
+            {transcript.map((s, i) => (
+              <Segment
+                key={`${s.start}-${i}`}
+                segment={s}
+                active={i === active}
+                onPress={onSeek}
+                onLayoutY={(y) => {
+                  segmentY.current[i] = y;
+                }}
+              />
+            ))}
+          </Animated.View>
+        )}
+
+        {waitingForModel && (
+          <Notice
+            icon="hourglass-outline"
+            tint={Colors.warning}
+            title="Waiting for a speech model"
+            body="Download a model in Profile and this recording is transcribed automatically."
+            action="Open Profile"
+            actionIcon="cloud-download-outline"
+            onAction={() => router.navigate('/profile')}
+          />
+        )}
+
+        {transcriptStatus === 'processing' && !waitingForModel && (
+          <View>
+            <View style={styles.processingRow}>
+              <ActivityIndicator size="small" color={Colors.labelSecondary} />
+              <Text style={styles.processingText}>
+                {recording.transcriptProgress === undefined
+                  ? 'Queued for transcription…'
+                  : `Transcribing on device… ${Math.round(recording.transcriptProgress * 100)}%`}
+              </Text>
+            </View>
+            <SkeletonLines />
+          </View>
+        )}
+
+        {transcriptStatus === 'failed' && (
+          <Notice
+            icon="alert-circle"
+            tint={Colors.record}
+            title="Transcription failed"
+            body={recording.transcriptError ?? 'We couldn’t turn this recording into text. Please try again.'}
+            action="Retry"
+            onAction={onRetry}
+          />
+        )}
+
+        {transcriptStatus === 'done' && transcript.length === 0 && (
+          <Notice
+            icon="mic-off-outline"
+            tint={Colors.labelSecondary}
+            title="No speech detected"
+            body="Whisper didn’t hear any words in this recording. Try again with a larger model, or record closer to the microphone."
+            action="Try Again"
+            onAction={onRetry}
+          />
+        )}
+
+        {transcriptStatus === 'none' && (
+          <Notice
+            icon="document-text-outline"
+            tint={Colors.tint}
+            title="No transcript yet"
+            body="Generate a time-coded transcript you can search, copy and follow along with."
+            action="Transcribe"
+            onAction={onRetry}
+          />
         )}
       </View>
-
-      {done && (
-        <View style={styles.list} onLayout={(e) => (listY.current = e.nativeEvent.layout.y)}>
-          {transcript.map((s, i) => (
-            <Segment
-              key={`${s.start}-${i}`}
-              segment={s}
-              active={i === active}
-              onPress={onSeek}
-              onLayoutY={(y) => {
-                segmentY.current[i] = y;
-              }}
-            />
-          ))}
-        </View>
-      )}
-
-      {waitingForModel && (
-        <Notice
-          icon="hourglass-outline"
-          tint={Colors.warning}
-          title="Waiting for a speech model"
-          body="Download a model in Profile and this recording is transcribed automatically."
-          action="Open Profile"
-          actionIcon="cloud-download-outline"
-          onAction={() => router.navigate('/profile')}
-        />
-      )}
-
-      {transcriptStatus === 'processing' && !waitingForModel && (
-        <View>
-          <View style={styles.processingRow}>
-            <ActivityIndicator size="small" color={Colors.labelSecondary} />
-            <Text style={styles.processingText}>
-              {recording.transcriptProgress === undefined
-                ? 'Queued for transcription…'
-                : `Transcribing on device… ${Math.round(recording.transcriptProgress * 100)}%`}
-            </Text>
-          </View>
-          <SkeletonLines />
-        </View>
-      )}
-
-      {transcriptStatus === 'failed' && (
-        <Notice
-          icon="alert-circle"
-          tint={Colors.record}
-          title="Transcription failed"
-          body={recording.transcriptError ?? 'We couldn’t turn this recording into text. Please try again.'}
-          action="Retry"
-          onAction={onRetry}
-        />
-      )}
-
-      {transcriptStatus === 'done' && transcript.length === 0 && (
-        <Notice
-          icon="mic-off-outline"
-          tint={Colors.labelSecondary}
-          title="No speech detected"
-          body="Whisper didn’t hear any words in this recording. Try again with a larger model, or record closer to the microphone."
-          action="Try Again"
-          onAction={onRetry}
-        />
-      )}
-
-      {transcriptStatus === 'none' && (
-        <Notice
-          icon="document-text-outline"
-          tint={Colors.tint}
-          title="No transcript yet"
-          body="Generate a time-coded transcript you can search, copy and follow along with."
-          action="Transcribe"
-          onAction={onRetry}
-        />
-      )}
-    </View>
+    </LayoutAnimationConfig>
   );
 }
 
@@ -293,6 +306,11 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     backgroundColor: Colors.tintSoft,
   },
+  copyInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+  },
   copyText: {
     fontSize: 13,
     fontWeight: '600',
@@ -312,9 +330,6 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
     color: Colors.labelTertiary,
     marginBottom: Spacing.xxs + 1,
-  },
-  stampActive: {
-    color: Colors.tint,
   },
   segmentText: {
     ...Type.body,

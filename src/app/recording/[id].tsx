@@ -144,8 +144,10 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
   const headerBgStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.get(), [10, 50], [0, 1], Extrapolation.CLAMP),
   }));
+  // The compact title rises into the bar as the large title scrolls under it (same as Archive).
   const headerTitleStyle = useAnimatedStyle(() => ({
     opacity: interpolate(scrollY.get(), [50, 90], [0, 1], Extrapolation.CLAMP),
+    transform: [{ translateY: interpolate(scrollY.get(), [50, 90], [6, 0], Extrapolation.CLAMP) }],
   }));
 
   const playing = pb.playing;

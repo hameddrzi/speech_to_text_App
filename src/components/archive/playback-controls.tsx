@@ -1,10 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useEffect } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
-import Animated, { ZoomIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { haptic } from '@/utils/haptics';
 import { SKIP_SECONDS, type PlaybackRate } from '@/components/archive/use-playback';
 import { Glass } from '@/components/glass';
+import { PressScale, Spring, Timing, useMotion } from '@/constants/motion';
 import { Colors, Radius, Shadow, Spacing } from '@/constants/theme';
 
 /** Circular arrow with "15" inside, like SF Symbols gobackward.15 / goforward.15. */
@@ -39,7 +41,14 @@ export function SkipButton({
   );
 }
 
-/** Play/pause. `large` is a filled dark disc (detail screen); default is a bare glyph (inline row). */
+/** How small the outgoing glyph gets while it fades during the play ↔ pause morph. */
+const GLYPH_MIN_SCALE = 0.6;
+
+/**
+ * Play/pause. `large` is a filled dark disc (detail screen); default is a bare glyph (inline row).
+ * Both glyphs stay mounted and cross-fade with a slight scale, so the swap is one continuous morph
+ * (no mount/unmount, no overlapping layout animations). The disc sinks a little while pressed.
+ */
 export function PlayButton({
   playing,
   onPress,
@@ -52,30 +61,47 @@ export function PlayButton({
   const size = large ? 72 : 48;
   const iconSize = large ? 32 : 34;
   const color = large ? '#FFFFFF' : Colors.label;
+  const p = useSharedValue(playing ? 1 : 0);
+  const pressed = useSharedValue(1);
+  const { reduced } = useMotion();
+  const minScale = reduced ? 1 : GLYPH_MIN_SCALE;
+
+  useEffect(() => {
+    p.set(withTiming(playing ? 1 : 0, Timing.fadeFast));
+  }, [playing, p]);
+
+  const discStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressed.get() }] }));
+  const playStyle = useAnimatedStyle(() => ({
+    opacity: 1 - p.get(),
+    transform: [{ scale: 1 - p.get() * (1 - minScale) }],
+  }));
+  const pauseStyle = useAnimatedStyle(() => ({
+    opacity: p.get(),
+    transform: [{ scale: minScale + p.get() * (1 - minScale) }],
+  }));
+
   return (
     <Pressable
       onPress={() => {
         haptic.medium();
         onPress();
       }}
+      onPressIn={() => {
+        pressed.set(withTiming(PressScale.button, Timing.pressIn));
+      }}
+      onPressOut={() => {
+        pressed.set(withSpring(1, Spring.press));
+      }}
       accessibilityRole="button"
-      accessibilityLabel={playing ? 'Pause' : 'Play'}
-      style={({ pressed }) => [
-        styles.play,
-        { width: size, height: size, borderRadius: size / 2, transform: [{ scale: pressed ? 0.94 : 1 }] },
-        large && styles.playLarge,
-      ]}>
+      accessibilityLabel={playing ? 'Pause' : 'Play'}>
       <Animated.View
-        key={playing ? 'pause' : 'play'}
-        entering={ZoomIn.duration(160)}
-        exiting={ZoomOut.duration(120)}
-        style={styles.playIcon}>
-        <Ionicons
-          name={playing ? 'pause' : 'play'}
-          size={iconSize}
-          color={color}
-          style={!playing ? { marginLeft: iconSize * 0.1 } : undefined}
-        />
+        style={[styles.play, { width: size, height: size, borderRadius: size / 2 }, large && styles.playLarge, discStyle]}>
+        <Animated.View style={[styles.playIcon, playStyle]} pointerEvents="none">
+          <Ionicons name="play" size={iconSize} color={color} style={{ marginLeft: iconSize * 0.1 }} />
+        </Animated.View>
+        <Animated.View style={[styles.playIcon, pauseStyle]} pointerEvents="none">
+          <Ionicons name="pause" size={iconSize} color={color} />
+        </Animated.View>
       </Animated.View>
     </Pressable>
   );

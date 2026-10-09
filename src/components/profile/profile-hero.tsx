@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { PressScale, Spring, Timing } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 const AVATAR = 96;
@@ -28,7 +29,7 @@ function initials(name: string) {
 /** Apple ID–style header: gradient initials avatar inside a glass ring, name, subtitle, "Edit" glass pill. */
 export function ProfileHero({ name, subtitle, onEdit }: Props) {
   const scale = useSharedValue(1);
-  const pillStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const pillStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.get() }] }));
 
   return (
     <View style={styles.root}>
@@ -64,10 +65,10 @@ export function ProfileHero({ name, subtitle, onEdit }: Props) {
         accessibilityLabel={name ? 'Edit name' : 'Add your name'}
         onPress={onEdit}
         onPressIn={() => {
-          scale.set(withSpring(0.94, { damping: 16, stiffness: 320 }));
+          scale.set(withTiming(PressScale.button, Timing.pressIn));
         }}
         onPressOut={() => {
-          scale.set(withSpring(1, { damping: 14, stiffness: 260 }));
+          scale.set(withSpring(1, Spring.press));
         }}>
         <Animated.View style={pillStyle}>
           <Glass radius={Radius.pill} intensity={50} strong style={styles.pill}>

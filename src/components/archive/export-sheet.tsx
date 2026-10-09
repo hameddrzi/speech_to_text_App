@@ -1,10 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { Easing, FadeIn } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
+import { Duration, fadeIn } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import {
@@ -59,7 +60,7 @@ const FORMATS: FormatOption[] = [
   },
 ];
 
-const FADE = FadeIn.duration(220).easing(Easing.out(Easing.cubic));
+const FADE = fadeIn(Duration.base);
 
 function successText(o: Exclude<ExportOutcome, { kind: 'cancelled' | 'shared' }>): string {
   switch (o.kind) {

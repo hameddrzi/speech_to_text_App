@@ -28,7 +28,8 @@ The app has three layers:
 | Services | `src/stt/`, `src/hooks/` | Microphone capture, WAV writing, Whisper transcription. |
 
 UI components in `src/components/` are grouped by the screen that owns them (`record/`, `archive/`,
-`profile/`). The only shared ones are `glass.tsx`, `glass-tab-bar.tsx` and `ambient-background.tsx`.
+`profile/`). The shared ones are `glass.tsx`, `glass-tab-bar.tsx`, `ambient-background.tsx`, `bottom-sheet.tsx`
+and `fade-swap.tsx`; shared motion tokens live in `src/constants/motion.ts` (see the design system).
 
 ## Navigation
 

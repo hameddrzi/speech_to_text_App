@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
+import { Duration } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Option } from '@/store/settings';
 
@@ -45,7 +46,7 @@ export function OptionSheet<T extends string>({ visible, title, message, options
                   onPress={() => {
                     onSelect(o.value);
                     // Let the checkmark move before the sheet slides away.
-                    setTimeout(onClose, 180);
+                    setTimeout(onClose, Duration.fast);
                   }}
                   style={({ pressed }) => [styles.option, pressed && styles.optionPressed]}>
                   <View style={styles.optionText}>

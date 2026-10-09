@@ -31,6 +31,9 @@ export default function RootLayout() {
             <StatusBar style="dark" />
             <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: Colors.background } }}>
               <Stack.Screen name="(tabs)" />
+              {/* Native push. 'ios_from_right' gives Android the iOS-style slide with parallax that matches the
+                  app's look; on iOS it resolves to the default native push (and its swipe-back gesture). */}
+              <Stack.Screen name="recording/[id]" options={{ animation: 'ios_from_right' }} />
             </Stack>
           </RecordingsProvider>
         </SettingsProvider>

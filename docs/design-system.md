@@ -106,9 +106,10 @@ Shadow    soft (cards) · lifted (floating controls)
 
 ## Motion and feedback
 
-- Small controls (record button morph, switches, tab lens) use **Reanimated springs**.
-- Anything that appears over the screen (sheets, toasts) uses a short **timing** curve, never a spring:
-  ease-out in (~250 ms), ease-in out (~200 ms). Sheets go through `<BottomSheet>`
+- Small controls (record button morph, switches, tab lens, press feedback) use **well-damped Reanimated
+  springs** (damping ratio ≥ 0.86, so they land without a visible wobble).
+- Anything that appears over the screen (sheets, toasts, notices) uses a short **timing** curve, never a spring:
+  ease-out in (~250 ms), ease-in out (~190 ms). Sheets go through `<BottomSheet>`
   (`src/components/bottom-sheet.tsx`), which slides out before unmounting its Modal.
 - **Never build animated colors or sizes with template strings** (`` `rgba(0,0,0,${v})` ``). A settling
   animation reaches values like `1e-8`, and Android crashes on the resulting `rgba(0,0,0,1e-8)`.
@@ -118,6 +119,44 @@ Shadow    soft (cards) · lifted (floating controls)
   `src/utils/haptics.ts` (never `expo-haptics` directly), so the Haptics switch in Profile is respected.
 - The app's **React Compiler** is on, so components are memoized automatically; avoid hand-written
   `useMemo` / `useCallback` unless profiling shows a need.
+
+### Motion tokens: `src/constants/motion.ts`
+
+Every animation takes its numbers from `motion.ts`, never from inline literals:
+
+| Export | What it holds |
+|---|---|
+| `Duration` | `press` 90 · `fast` 160 · `exit` 190 · `base` 220 · `enter` 250 · `slow` 320 · `progress` 480 · `tabFade` 180 ms |
+| `Easings` | `out` (arrivals), `in` (departures), `inOut` (changes in place) as cubic beziers, plus `breathe` for loops and `linear` |
+| `Timing` | ready `withTiming` configs: `enter`, `exit`, `change`, `fast`, `pressIn`, `pressOut`, `progress`, and `fade` / `fadeFast` (opacity only, kept with reduced motion) |
+| `Spring` | `press` (ratio 1), `control` (0.86, lenses / switches / knobs), `morph` (0.9, record button) |
+| `PressScale`, `Travel`, `Stagger` | press-in scales (row 0.98, button 0.94, control 0.9), slide distances, list stagger |
+| `fadeIn()`, `fadeOut()`, `riseIn()`, `listLayout` | layout-animation presets (`entering` / `exiting` / `layout`) |
+| `useMotion()` | `{ reduced, distance(px) }`: the OS reduce-motion flag, and travel that collapses to 0 when it is on |
+
+Two helpers build on it:
+
+- `<FadeSwap swapKey>` (`src/components/fade-swap.tsx`) cross-fades content that changes in place (status
+  chips, "Copied", the record status line, Get → Downloading → Model Ready). Only the new content fades in;
+  nothing animates on first mount.
+- `useListIntroClock()` / `introProgress()` (`src/components/archive/list-intro.tsx`) run the archive's one-time
+  staggered entrance from one shared clock, as an animated style instead of `entering`, so it never fights the
+  list's layout transitions (on web, `entering` on these rows broke the filter-change transitions).
+
+Rules:
+
+- **Animate `transform` and `opacity`.** Morphs are a scale (the record button), masks are opposite translations
+  (the waveform scrubber's played part), bars rise inside a clipped slot (Profile stats), progress fills use
+  `scaleX`. The Storage bar's stacked segments are the one width animation; they change only when storage does.
+- **Colors go through `interpolateColor`** (tab labels, timer, transcript highlight, switch track, settings rows).
+- **Reduced motion:** Reanimated skips `withTiming` / `withSpring` / layout animations by default when the OS asks
+  for less motion, so values jump to their end. Pure fades opt back in with `Timing.fade` or `fadeIn()`, anything
+  that slides uses `useMotion().distance()`, and loops (halo pulse, blinking dot, listening dots) stop.
+- **Never block or delay.** Animations don't gate touches or navigation; only a picked option waits `Duration.fast`
+  so its checkmark moves before the sheet closes.
+- **Screen transitions:** the detail screen pushes with `animation: 'ios_from_right'` (Android gets the iOS-style
+  slide; iOS keeps its native push), and tabs cross-fade (`animation: 'fade'`, `Duration.tabFade`).
+- On web, layout animations only understand bezier easings, which is why `Easings` are written as beziers.
 
 ## Rules for new UI
 

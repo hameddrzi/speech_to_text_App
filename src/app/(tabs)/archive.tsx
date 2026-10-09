@@ -8,17 +8,20 @@ import Animated, {
   useAnimatedScrollHandler,
   useAnimatedStyle,
   useSharedValue,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/ambient-background';
 import { confirmDelete } from '@/components/archive/actions';
 import { EmptyState } from '@/components/archive/empty-state';
+import { introProgress, useListIntroClock } from '@/components/archive/list-intro';
 import { haptic } from '@/utils/haptics';
 import { RecordingRow, ROW_LAYOUT } from '@/components/archive/recording-row';
 import { SearchField } from '@/components/archive/search-field';
 import { SegmentedControl } from '@/components/archive/segmented-control';
 import { Glass } from '@/components/glass';
+import { Travel, useMotion } from '@/constants/motion';
 import { Colors, ScreenPadding, Spacing, TabBarBottomGap, TabBarHeight, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
@@ -64,6 +67,20 @@ function withSections(list: Recording[]): ListItem[] {
   return items;
 }
 
+/** Section header that joins the list's first-mount stagger. */
+function SectionTitle({ title, index, introClock }: { title: string; index: number; introClock: SharedValue<number> }) {
+  const travel = useMotion().distance(Travel.row);
+  const style = useAnimatedStyle(() => {
+    const p = introProgress(introClock, index);
+    return { opacity: p, transform: [{ translateY: (1 - p) * travel }] };
+  });
+  return (
+    <Animated.Text style={[styles.sectionTitle, style]} accessibilityRole="header">
+      {title}
+    </Animated.Text>
+  );
+}
+
 function summary(list: Recording[]): string {
   const total = formatTotalTime(list.reduce((sum, r) => sum + r.duration, 0));
   const count = `${list.length} ${list.length === 1 ? 'recording' : 'recordings'}`;
@@ -76,6 +93,8 @@ export default function ArchiveScreen() {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const openSwipe = useRef<SwipeableMethods | null>(null);
+  // Rows and section headers rise in once, staggered, when the Archive first mounts (see list-intro.tsx).
+  const introClock = useListIntroClock();
 
   const data = useMemo(() => {
     const q = query.trim().toLocaleLowerCase();
@@ -181,15 +200,21 @@ export default function ArchiveScreen() {
             </View>
           </View>
         }
-        ListEmptyComponent={<EmptyState kind={recordings.length === 0 ? 'empty' : emptyKind} query={query} />}
-        renderItem={({ item }) =>
+        ListEmptyComponent={
+          <EmptyState
+            key={recordings.length === 0 ? 'empty' : emptyKind}
+            kind={recordings.length === 0 ? 'empty' : emptyKind}
+            query={query}
+          />
+        }
+        renderItem={({ item, index }) =>
           item.kind === 'section' ? (
-            <Text style={styles.sectionTitle} accessibilityRole="header">
-              {item.title}
-            </Text>
+            <SectionTitle title={item.title} index={index} introClock={introClock} />
           ) : (
             <RecordingRow
               recording={item.recording}
+              introClock={introClock}
+              introIndex={index}
               onOpen={onOpen}
               onToggleFavorite={toggleFavorite}
               onDelete={onDelete}

@@ -1,8 +1,9 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
-import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Timing, useMotion } from '@/constants/motion';
 import { Spacing } from '@/constants/theme';
 
 type Props = {
@@ -13,8 +14,12 @@ type Props = {
   children: ReactNode;
 };
 
-const OPEN = { duration: 260, easing: Easing.out(Easing.cubic) };
-const CLOSE = { duration: 200, easing: Easing.in(Easing.cubic) };
+// Timing curves, never springs: ease-out in, ease-in out. They also run with reduced motion, where the
+// sheet only fades (no slide).
+const OPEN = { ...Timing.enter, reduceMotion: Timing.fade.reduceMotion };
+const CLOSE = { ...Timing.exit, reduceMotion: Timing.fade.reduceMotion };
+/** How far below its resting place the sheet starts, as a fraction of the window height. */
+const SLIDE_FRACTION = 0.6;
 
 /**
  * Bottom sheet over a dimmed backdrop. One calm, interruptible slide (no springs, no layout animations):
@@ -25,6 +30,8 @@ export function BottomSheet({ visible, onClose, closeLabel = 'Close', children }
   const { height } = useWindowDimensions();
   const [mounted, setMounted] = useState(visible);
   const progress = useSharedValue(0);
+  const { reduced } = useMotion();
+  const slide = reduced ? 0 : height * SLIDE_FRACTION;
 
   // Mount before sliding in (state adjustment during render, no extra effect pass).
   if (visible && !mounted) setMounted(true);
@@ -44,7 +51,8 @@ export function BottomSheet({ visible, onClose, closeLabel = 'Close', children }
 
   const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.get() }));
   const sheetStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (1 - progress.get()) * height * 0.6 }],
+    opacity: reduced ? progress.get() : 1,
+    transform: [{ translateY: (1 - progress.get()) * slide }],
   }));
 
   return (

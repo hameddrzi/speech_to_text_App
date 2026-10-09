@@ -4,26 +4,32 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import ReanimatedSwipeable, { type SwipeableMethods } from 'react-native-gesture-handler/ReanimatedSwipeable';
 import Animated, {
   Extrapolation,
-  FadeOut,
   interpolate,
-  LinearTransition,
   useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 
 import { haptic } from '@/utils/haptics';
 import { shareRecording } from '@/components/archive/actions';
+import { introProgress } from '@/components/archive/list-intro';
 import { StatusChip } from '@/components/archive/status-chip';
 import { Glass } from '@/components/glass';
+import { fadeOut, listLayout, PressScale, Spring, Timing, Travel, useMotion } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import { transcriptText, type Recording } from '@/data/recordings';
 import { useSelectedModelReady } from '@/stt/use-model-download';
 import { formatDuration, formatRecordingDate } from '@/utils/format';
 
-export const ROW_LAYOUT = LinearTransition.duration(220);
+export const ROW_LAYOUT = listLayout;
 
 export type RecordingRowProps = {
   recording: Recording;
+  /** First-mount stagger clock and this row's position in the list (see list-intro.tsx). */
+  introClock?: SharedValue<number>;
+  introIndex?: number;
   onOpen: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   /** Must ask for confirmation; resolves true when the recording was deleted. */
@@ -75,6 +81,8 @@ function SwipeAction({
  */
 export const RecordingRow = memo(function RecordingRow({
   recording,
+  introClock,
+  introIndex,
   onOpen,
   onToggleFavorite,
   onDelete,
@@ -86,6 +94,18 @@ export const RecordingRow = memo(function RecordingRow({
   const modelReady = useSelectedModelReady();
   const waitingForModel = recording.transcriptStatus === 'processing' && !modelReady;
   const id = recording.id;
+
+  // First-mount stagger + press feedback (the card sinks slightly), as transform + opacity only. The swipe
+  // pan cancels the press as soon as it activates, so a swipe never leaves the card pressed.
+  const pressed = useSharedValue(0);
+  const travel = useMotion().distance(Travel.row);
+  const pressStyle = useAnimatedStyle(() => {
+    const intro = introProgress(introClock, introIndex);
+    return {
+      opacity: intro * (1 - pressed.get() * 0.12),
+      transform: [{ translateY: (1 - intro) * travel }, { scale: 1 - pressed.get() * (1 - PressScale.row) }],
+    };
+  });
 
   const handleDelete = async () => {
     haptic.warning();
@@ -119,7 +139,7 @@ export const RecordingRow = memo(function RecordingRow({
             : null;
 
   return (
-    <Animated.View layout={ROW_LAYOUT} exiting={FadeOut.duration(180)} style={styles.outer}>
+    <Animated.View layout={ROW_LAYOUT} exiting={fadeOut()} style={styles.outer}>
       <ReanimatedSwipeable
         ref={swipeRef}
         friction={1.8}
@@ -158,50 +178,57 @@ export const RecordingRow = memo(function RecordingRow({
             />
           </View>
         )}>
-        <Glass strong elevated={false} radius={Radius.lg} style={styles.card}>
-          <Pressable
-            onPress={() => {
-              haptic.selection();
-              onOpen(id);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel={`${recording.title}, ${formatRecordingDate(recording.createdAt)}, ${formatDuration(recording.duration)}`}
-            accessibilityHint="Opens the transcript and player"
-            style={({ pressed }) => pressed && styles.pressed}>
-            <View style={styles.titleRow}>
-              <Text
-                numberOfLines={1}
-                style={styles.title}>
-                {recording.title}
-              </Text>
-              {recording.favorite && <Ionicons name="star" size={13} color={Colors.warning} />}
-              <Ionicons name="chevron-forward" size={16} color={Colors.labelTertiary} />
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.date}>{formatRecordingDate(recording.createdAt)}</Text>
-              <StatusChip
-                status={recording.transcriptStatus}
-                waitingForModel={waitingForModel}
-                onRetry={() => onRetry(id)}
-              />
-              <View style={styles.flex} />
-              <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
-            </View>
-            {preview.length > 0 ? (
-              <Text
-                numberOfLines={2}
-                style={styles.preview}>
-                {preview}
-              </Text>
-            ) : (
-              statusLine && (
-                <Text style={styles.previewMuted} numberOfLines={2}>
-                  {statusLine}
+        <Animated.View style={pressStyle}>
+          <Glass strong elevated={false} radius={Radius.lg} style={styles.card}>
+            <Pressable
+              onPress={() => {
+                haptic.selection();
+                onOpen(id);
+              }}
+              onPressIn={() => {
+                pressed.set(withTiming(1, Timing.pressIn));
+              }}
+              onPressOut={() => {
+                pressed.set(withSpring(0, Spring.press));
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`${recording.title}, ${formatRecordingDate(recording.createdAt)}, ${formatDuration(recording.duration)}`}
+              accessibilityHint="Opens the transcript and player">
+              <View style={styles.titleRow}>
+                <Text
+                  numberOfLines={1}
+                  style={styles.title}>
+                  {recording.title}
                 </Text>
-              )
-            )}
-          </Pressable>
-        </Glass>
+                {recording.favorite && <Ionicons name="star" size={13} color={Colors.warning} />}
+                <Ionicons name="chevron-forward" size={16} color={Colors.labelTertiary} />
+              </View>
+              <View style={styles.metaRow}>
+                <Text style={styles.date}>{formatRecordingDate(recording.createdAt)}</Text>
+                <StatusChip
+                  status={recording.transcriptStatus}
+                  waitingForModel={waitingForModel}
+                  onRetry={() => onRetry(id)}
+                />
+                <View style={styles.flex} />
+                <Text style={styles.duration}>{formatDuration(recording.duration)}</Text>
+              </View>
+              {preview.length > 0 ? (
+                <Text
+                  numberOfLines={2}
+                  style={styles.preview}>
+                  {preview}
+                </Text>
+              ) : (
+                statusLine && (
+                  <Text style={styles.previewMuted} numberOfLines={2}>
+                    {statusLine}
+                  </Text>
+                )
+              )}
+            </Pressable>
+          </Glass>
+        </Animated.View>
       </ReanimatedSwipeable>
     </Animated.View>
   );
@@ -247,9 +274,6 @@ const styles = StyleSheet.create({
     color: 'rgba(60,60,67,0.75)',
     lineHeight: 18,
     marginTop: Spacing.sm - 1,
-  },
-  pressed: {
-    opacity: 0.6,
   },
   previewMuted: {
     ...Type.footnote,

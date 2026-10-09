@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Spring, Timing } from '@/constants/motion';
 import { Colors } from '@/constants/theme';
 
 const TRACK_W = 51;
@@ -16,7 +17,7 @@ const KNOB = 27;
 const PAD = 2;
 const STRETCH = 7;
 
-const SPRING = { damping: 20, stiffness: 260, mass: 0.7 } as const;
+const TRACK_OFF = 'rgba(120,120,128,0.16)';
 
 type Props = {
   value: boolean;
@@ -34,17 +35,17 @@ export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled
   const pressed = useSharedValue(0);
 
   useEffect(() => {
-    progress.set(withSpring(value ? 1 : 0, SPRING));
+    progress.set(withSpring(value ? 1 : 0, Spring.control));
   }, [value, progress]);
 
   const trackStyle = useAnimatedStyle(() => ({
-    backgroundColor: interpolateColor(progress.value, [0, 1], ['rgba(120,120,128,0.16)', Colors.success]),
+    backgroundColor: interpolateColor(progress.get(), [0, 1], [TRACK_OFF, Colors.success]),
   }));
 
   // Only transforms are animated (no width), so the switch never triggers a layout pass while it moves.
   const knobStyle = useAnimatedStyle(() => {
-    const p = Math.min(1, Math.max(0, progress.value));
-    const stretch = pressed.value * STRETCH;
+    const p = Math.min(1, Math.max(0, progress.get()));
+    const stretch = pressed.get() * STRETCH;
     const travel = TRACK_W - PAD * 2 - KNOB;
     // Stretch from the left edge when off and from the right edge when on, like UIKit.
     const x = p * travel + (stretch / 2) * (1 - 2 * p);
@@ -59,10 +60,10 @@ export function GlassSwitch({ value, onValueChange, accessibilityLabel, disabled
       disabled={disabled}
       hitSlop={8}
       onPressIn={() => {
-        pressed.set(withTiming(1, { duration: 160 }));
+        pressed.set(withTiming(1, Timing.fast));
       }}
       onPressOut={() => {
-        pressed.set(withTiming(0, { duration: 200 }));
+        pressed.set(withTiming(0, Timing.change));
       }}
       onPress={() => onValueChange(!value)}
       style={disabled && styles.disabled}>

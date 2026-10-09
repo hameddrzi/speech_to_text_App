@@ -2,10 +2,17 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Glass } from '@/components/glass';
+import { PressScale, Spring, Timing } from '@/constants/motion';
 import { Colors, Radius, Shadow, Spacing, TabBarBottomGap, TabBarHeight } from '@/constants/theme';
 import { haptic } from '@/utils/haptics';
 
@@ -19,6 +26,64 @@ const TABS: Record<string, { label: string; icon: IconName; iconActive: IconName
 
 const BAR_WIDTH = 300;
 const INNER_PADDING = 6;
+const ICON_SIZE = 22;
+
+/**
+ * One tab: the outline and filled glyphs are stacked and cross-fade (with their colors) as the tab becomes
+ * active, the label color follows through interpolateColor, and the icon dips slightly while pressed.
+ */
+function TabItem({
+  meta,
+  focused,
+  activeColor,
+  width,
+  onPress,
+}: {
+  meta: { label: string; icon: IconName; iconActive: IconName };
+  focused: boolean;
+  activeColor: string;
+  width: number;
+  onPress: () => void;
+}) {
+  const on = useSharedValue(focused ? 1 : 0);
+  const pressed = useSharedValue(1);
+
+  useEffect(() => {
+    on.set(withTiming(focused ? 1 : 0, Timing.fade));
+  }, [focused, on]);
+
+  const iconWrapStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressed.get() }] }));
+  const outlineStyle = useAnimatedStyle(() => ({ opacity: 1 - on.get() }));
+  const filledStyle = useAnimatedStyle(() => ({ opacity: on.get() }));
+  const labelStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(on.get(), [0, 1], [Colors.labelSecondary, Colors.label]),
+  }));
+
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected: focused }}
+      accessibilityLabel={meta.label}
+      onPress={onPress}
+      onPressIn={() => {
+        pressed.set(withTiming(PressScale.control, Timing.pressIn));
+      }}
+      onPressOut={() => {
+        pressed.set(withSpring(1, Spring.press));
+      }}
+      style={[styles.item, { width }]}>
+      <Animated.View style={[styles.icon, iconWrapStyle]}>
+        <Animated.View style={[styles.iconLayer, outlineStyle]}>
+          <Ionicons name={meta.icon} size={ICON_SIZE} color={Colors.labelSecondary} />
+        </Animated.View>
+        <Animated.View style={[styles.iconLayer, filledStyle]}>
+          <Ionicons name={meta.iconActive} size={ICON_SIZE} color={activeColor} />
+        </Animated.View>
+      </Animated.View>
+      <Animated.Text style={[styles.label, labelStyle]}>{meta.label}</Animated.Text>
+    </Pressable>
+  );
+}
 
 /** Floating frosted-glass pill tab bar with a sliding white "lens" behind the active tab. */
 export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
@@ -27,11 +92,12 @@ export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
   const itemWidth = (BAR_WIDTH - INNER_PADDING * 2) / count;
   const x = useSharedValue(state.index * itemWidth);
 
+  // Well-damped spring: the lens glides under the new tab and lands without a wobble.
   useEffect(() => {
-    x.value = withSpring(state.index * itemWidth, { damping: 18, stiffness: 180, mass: 0.8 });
+    x.set(withSpring(state.index * itemWidth, Spring.control));
   }, [state.index, itemWidth, x]);
 
-  const lensStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
+  const lensStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
 
   return (
     <View
@@ -53,23 +119,14 @@ export function GlassTabBar({ state, navigation }: BottomTabBarProps) {
           };
 
           return (
-            <Pressable
+            <TabItem
               key={route.key}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: focused }}
-              accessibilityLabel={meta.label}
+              meta={meta}
+              focused={focused}
+              activeColor={route.name === 'index' ? Colors.record : Colors.label}
+              width={itemWidth}
               onPress={onPress}
-              style={[styles.item, { width: itemWidth }]}>
-              <Ionicons
-                name={focused ? meta.iconActive : meta.icon}
-                size={22}
-                color={focused ? (route.name === 'index' ? Colors.record : Colors.label) : Colors.labelSecondary}
-              />
-              <Animated.Text
-                style={[styles.label, { color: focused ? Colors.label : Colors.labelSecondary }]}>
-                {meta.label}
-              </Animated.Text>
-            </Pressable>
+            />
           );
         })}
       </Glass>
@@ -109,6 +166,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xxs,
+  },
+  icon: {
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+  },
+  iconLayer: {
+    ...StyleSheet.absoluteFill,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   label: {
     fontSize: 10,
