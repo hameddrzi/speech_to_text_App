@@ -1,9 +1,11 @@
 import { router } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Platform, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AmbientBackground } from '@/components/ambient-background';
+import { FadeSwap } from '@/components/fade-swap';
 import { Glass } from '@/components/glass';
 import { ControlButton } from '@/components/record/control-button';
 import { LiveTranscriptCard } from '@/components/record/live-transcript-card';
@@ -14,6 +16,7 @@ import { RecordButton } from '@/components/record/record-button';
 import { RecordStatus } from '@/components/record/record-status';
 import { SavedToast } from '@/components/record/saved-toast';
 import { downsampleLevels } from '@/components/record/waveform-utils';
+import { Timing } from '@/constants/motion';
 import {
   Colors,
   Radius,
@@ -69,6 +72,15 @@ export default function RecordScreen() {
 
   const isActive = phase === 'recording' || phase === 'paused';
   const busy = phase === 'starting' || phase === 'saving';
+
+  // The timer brightens from tertiary gray to full black as a take starts (color via interpolateColor).
+  const timerOn = useSharedValue(isActive ? 1 : 0);
+  useEffect(() => {
+    timerOn.set(withTiming(isActive ? 1 : 0, Timing.fade));
+  }, [isActive, timerOn]);
+  const timerStyle = useAnimatedStyle(() => ({
+    color: interpolateColor(timerOn.get(), [0, 1], [Colors.labelTertiary, Colors.label]),
+  }));
   const nextTitle = nextRecordingTitle(recordings);
   const bottomSpace = TabBarHeight + Math.max(insets.bottom, TabBarBottomGap) + Spacing.lg;
 
@@ -153,9 +165,11 @@ export default function RecordScreen() {
             <Text style={Type.largeTitle} accessibilityRole="header">
               Record
             </Text>
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {isActive ? nextTitle : today}
-            </Text>
+            <FadeSwap swapKey={isActive ? 'take' : 'today'}>
+              <Text style={styles.subtitle} numberOfLines={1}>
+                {isActive ? nextTitle : today}
+              </Text>
+            </FadeSwap>
           </View>
           <ModelPill disabled={isActive || busy} />
         </View>
@@ -163,16 +177,12 @@ export default function RecordScreen() {
         {/* Stage: timer + live waveform */}
         <View style={styles.stage}>
           <View style={styles.timerBlock}>
-            <Text
-              style={[
-                styles.timer,
-                compact && styles.timerCompact,
-                !isActive && { color: Colors.labelTertiary },
-              ]}
+            <Animated.Text
+              style={[styles.timer, compact && styles.timerCompact, timerStyle]}
               accessibilityRole="timer"
               accessibilityLabel={`Elapsed ${Math.floor(elapsedMs / 1000)} seconds`}>
               {formatTimer(elapsedMs)}
-            </Text>
+            </Animated.Text>
             <RecordStatus phase={phase} message={session.error} simulated={session.simulated} />
           </View>
 

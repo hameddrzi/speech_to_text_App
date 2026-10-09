@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
   cancelAnimation,
-  Easing,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
@@ -11,6 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Duration, Easings, PressScale, Spring, Timing, useMotion } from '@/constants/motion';
 import { Colors, Shadow } from '@/constants/theme';
 
 type Props = {
@@ -24,43 +24,54 @@ type Props = {
   accessibilityLabel: string;
 };
 
-const MORPH_SPRING = { damping: 15, stiffness: 170, mass: 0.9 };
+/** Stop-square side as a fraction of the circle, and its visual corner radius. */
+const STOP_SCALE = 0.46;
+const STOP_RADIUS = 8;
+const HALO_PERIOD = 1600;
 
-/** The Voice Memos record button: white ring around a red circle that springs into a rounded square. */
+/**
+ * The Voice Memos record button: white ring around a red circle that morphs into a rounded square.
+ * The morph is a scale + corner-radius change on a fixed-size view, so it never triggers layout.
+ */
 export function RecordButton({ recording, live = false, onPress, disabled, size = 78, accessibilityLabel }: Props) {
   const inner = size - 18;
   const morph = useSharedValue(recording ? 1 : 0);
   const pressed = useSharedValue(1);
   const halo = useSharedValue(0);
+  // The pulsing halo is decoration; with reduced motion the button only morphs.
+  const { reduced } = useMotion();
+  const pulse = live && !reduced;
 
   useEffect(() => {
-    morph.value = withSpring(recording ? 1 : 0, MORPH_SPRING);
+    morph.set(withSpring(recording ? 1 : 0, Spring.morph));
   }, [recording, morph]);
 
   useEffect(() => {
-    if (live) {
-      halo.value = 0;
-      halo.value = withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }), -1, false);
+    if (pulse) {
+      halo.set(0);
+      halo.set(withRepeat(withTiming(1, { duration: HALO_PERIOD, easing: Easings.out }), -1, false));
     } else {
       cancelAnimation(halo);
-      halo.value = withTiming(0, { duration: 200 });
+      halo.set(withTiming(0, { duration: Duration.exit }));
     }
-  }, [live, halo]);
+  }, [pulse, halo]);
 
   const innerStyle = useAnimatedStyle(() => {
-    const side = interpolate(morph.value, [0, 1], [inner, inner * 0.46]);
+    const m = morph.get();
+    const scale = interpolate(m, [0, 1], [1, STOP_SCALE]);
+    // Interpolate the radius as it is seen on screen, then undo the scale so the corners stay round.
+    const visibleRadius = interpolate(m, [0, 1], [inner / 2, STOP_RADIUS]);
     return {
-      width: side,
-      height: side,
-      borderRadius: interpolate(morph.value, [0, 1], [inner / 2, 8]),
+      borderRadius: visibleRadius / scale,
+      transform: [{ scale }],
     };
   });
 
-  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressed.value }] }));
+  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: pressed.get() }] }));
 
   const haloStyle = useAnimatedStyle(() => ({
-    opacity: live ? interpolate(halo.value, [0, 1], [0.55, 0]) : 0,
-    transform: [{ scale: interpolate(halo.value, [0, 1], [1, 1.45]) }],
+    opacity: pulse ? interpolate(halo.get(), [0, 1], [0.55, 0]) : 0,
+    transform: [{ scale: interpolate(halo.get(), [0, 1], [1, 1.45]) }],
   }));
 
   return (
@@ -77,15 +88,15 @@ export function RecordButton({ recording, live = false, onPress, disabled, size 
         hitSlop={8}
         onPress={onPress}
         onPressIn={() => {
-          pressed.set(withSpring(0.92, { damping: 20, stiffness: 400 }));
+          pressed.set(withTiming(PressScale.control + 0.02, Timing.pressIn));
         }}
         onPressOut={() => {
-          pressed.set(withSpring(1, { damping: 14, stiffness: 300 }));
+          pressed.set(withSpring(1, Spring.press));
         }}>
         <Animated.View
           style={[styles.ring, { width: size, height: size, borderRadius: size / 2 }, scaleStyle]}>
           <View style={[styles.ringStroke, { borderRadius: size / 2 }]} />
-          <Animated.View style={[styles.inner, innerStyle]} />
+          <Animated.View style={[styles.inner, { width: inner, height: inner }, innerStyle]} />
         </Animated.View>
       </Pressable>
     </View>

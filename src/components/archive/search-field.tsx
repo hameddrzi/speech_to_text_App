@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, TextInput } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Duration, fadeIn, fadeOut } from '@/constants/motion';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 
 type Props = {
@@ -28,7 +29,7 @@ export function SearchField({ value, onChangeText, placeholder = 'Search' }: Pro
         accessibilityLabel="Search recordings"
       />
       {value.length > 0 && (
-        <Animated.View entering={FadeIn.duration(150)} exiting={FadeOut.duration(150)}>
+        <Animated.View entering={fadeIn(Duration.fast)} exiting={fadeOut(Duration.fast)}>
           <Pressable
             onPress={() => onChangeText('')}
             hitSlop={10}

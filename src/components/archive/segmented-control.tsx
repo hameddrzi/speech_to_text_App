@@ -4,6 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 
 import { haptic } from '@/utils/haptics';
 import { Glass } from '@/components/glass';
+import { Spring } from '@/constants/motion';
 import { Colors, Radius, Shadow } from '@/constants/theme';
 
 type Props<T extends string> = {
@@ -20,10 +21,19 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
   const index = Math.max(0, options.findIndex((o) => o.value === value));
   const itemWidth = width > 0 ? (width - PAD * 2) / options.length : 0;
   const x = useSharedValue(0);
+  const placed = useSharedValue(false);
 
   useEffect(() => {
-    x.set(withSpring(index * itemWidth, { damping: 20, stiffness: 220, mass: 0.8 }));
-  }, [index, itemWidth, x]);
+    if (itemWidth <= 0) return;
+    const to = index * itemWidth;
+    // The first measured position is applied directly, so the lens never slides in from the left on mount.
+    if (!placed.get()) {
+      placed.set(true);
+      x.set(to);
+      return;
+    }
+    x.set(withSpring(to, Spring.control));
+  }, [index, itemWidth, x, placed]);
 
   const lensStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
 

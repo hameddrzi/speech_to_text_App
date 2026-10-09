@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Duration, fadeIn, fadeOut } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -16,7 +17,7 @@ type Props = {
 /** Friendly glass card explaining why the microphone is needed, with a single clear action. */
 export function PermissionCard({ blocked, onAllow, onOpenSettings, onDismiss }: Props) {
   return (
-    <Animated.View entering={FadeIn.duration(240)} exiting={FadeOut.duration(180)}>
+    <Animated.View entering={fadeIn(Duration.enter)} exiting={fadeOut()}>
       <Glass radius={Radius.lg} strong style={styles.card}>
         <View style={styles.row}>
           <View style={styles.icon}>

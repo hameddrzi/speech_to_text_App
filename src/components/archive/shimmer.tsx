@@ -2,13 +2,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
-  Easing,
   cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
+
+import { Easings } from '@/constants/motion';
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -18,7 +19,10 @@ type Props = {
   duration?: number;
 };
 
-/** A soft light band sweeping across — skeleton placeholder, or a subtle "working" overlay on chips. */
+/**
+ * A soft light band sweeping across — skeleton placeholder, or a subtle "working" overlay on chips.
+ * With reduced motion the sweep runs once and stays off-screen (Reanimated stops repeats).
+ */
 export function Shimmer({
   style,
   base = 'rgba(60,60,67,0.08)',
@@ -31,7 +35,7 @@ export function Shimmer({
   useEffect(() => {
     if (width === 0) return;
     t.set(0);
-    t.set(withRepeat(withTiming(1, { duration, easing: Easing.inOut(Easing.quad) }), -1, false));
+    t.set(withRepeat(withTiming(1, { duration, easing: Easings.breathe }), -1, false));
     return () => cancelAnimation(t);
   }, [width, duration, t]);
 

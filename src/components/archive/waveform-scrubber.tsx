@@ -2,7 +2,6 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -10,6 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { haptic } from '@/utils/haptics';
+import { Duration, Easings, Spring, Timing } from '@/constants/motion';
 import { Colors } from '@/constants/theme';
 
 type Props = {
@@ -33,6 +33,10 @@ type Props = {
 };
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+/** Playback ticks arrive about this often; progress glides linearly between them. */
+const TICK_GLIDE_MS = 120;
+/** Knob growth while the finger is on the scrubber. */
+const KNOB_ACTIVE_SCALE = 1.5;
 
 /** Linear resample of the stored amplitudes to exactly `count` bars so the waveform fits any width. */
 function resample(values: number[], count: number): number[] {
@@ -109,8 +113,8 @@ export const WaveformScrubber = memo(function WaveformScrubber({
     const target = clamp01(progress);
     shown.set(
       playing
-        ? withTiming(target, { duration: 120, easing: Easing.linear })
-        : withTiming(target, { duration: 180, easing: Easing.out(Easing.cubic) }),
+        ? withTiming(target, { duration: TICK_GLIDE_MS, easing: Easings.linear })
+        : withTiming(target, { ...Timing.fast, duration: Duration.exit }),
     );
   }, [progress, playing, scrubbing, shown]);
 
@@ -146,12 +150,15 @@ export const WaveformScrubber = memo(function WaveformScrubber({
     return Gesture.Exclusive(pan, tap);
   }, [width, onScrubStart, onScrub, onSeek, scrubbing, shown]);
 
-  const playedStyle = useAnimatedStyle(() => ({ width: shown.get() * width }));
+  // The "played" copy is revealed by a clip that slides right while its content slides back left by the
+  // same amount: two opposite translations instead of an animated width, so playback never re-lays out.
+  const clipStyle = useAnimatedStyle(() => ({ transform: [{ translateX: (shown.get() - 1) * width }] }));
+  const clipContentStyle = useAnimatedStyle(() => ({ transform: [{ translateX: (1 - shown.get()) * width }] }));
   const headStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: shown.get() * width - (large ? 1 : 0.75) }],
   }));
   const knobStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: withSpring(scrubbing.get() ? 1.5 : 1, { damping: 14, stiffness: 220 }) }],
+    transform: [{ scale: withSpring(scrubbing.get() ? KNOB_ACTIVE_SCALE : 1, Spring.control) }],
   }));
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
@@ -175,10 +182,10 @@ export const WaveformScrubber = memo(function WaveformScrubber({
         {width > 0 && (
           <>
             <Bars bars={bars} height={height} barWidth={barWidth} gap={gap} color={Colors.waveIdle} />
-            <Animated.View style={[styles.played, { top: verticalPad }, playedStyle]} pointerEvents="none">
-              <View style={{ width }}>
+            <Animated.View style={[styles.played, { top: verticalPad, width }, clipStyle]} pointerEvents="none">
+              <Animated.View style={[{ width }, clipContentStyle]}>
                 <Bars bars={bars} height={height} barWidth={barWidth} gap={gap} color={Colors.wavePlayed} />
-              </View>
+              </Animated.View>
             </Animated.View>
             <Animated.View
               pointerEvents="none"

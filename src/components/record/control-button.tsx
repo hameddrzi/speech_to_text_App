@@ -3,7 +3,9 @@ import { useEffect } from 'react';
 import { Pressable } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
+import { FadeSwap } from '@/components/fade-swap';
 import { Glass } from '@/components/glass';
+import { PressScale, Spring, Timing } from '@/constants/motion';
 import { Colors, Radius } from '@/constants/theme';
 
 type Props = {
@@ -15,18 +17,21 @@ type Props = {
   size?: number;
 };
 
-/** Round frosted-glass secondary control (pause / resume / discard) that fades out when unavailable. */
+/**
+ * Round frosted-glass secondary control (pause / resume / discard). It rests dimmed and slightly smaller
+ * while unavailable, and eases up to full size when recording starts.
+ */
 export function ControlButton({ icon, accessibilityLabel, onPress, disabled, color = Colors.label, size = 52 }: Props) {
   const visible = useSharedValue(disabled ? 0 : 1);
   const pressed = useSharedValue(1);
 
   useEffect(() => {
-    visible.value = withTiming(disabled ? 0 : 1, { duration: 220 });
+    visible.set(withTiming(disabled ? 0 : 1, disabled ? Timing.exit : Timing.enter));
   }, [disabled, visible]);
 
   const style = useAnimatedStyle(() => ({
-    opacity: 0.28 + visible.value * 0.72,
-    transform: [{ scale: pressed.value * (0.9 + visible.value * 0.1) }],
+    opacity: 0.28 + visible.get() * 0.72,
+    transform: [{ scale: pressed.get() * (0.9 + visible.get() * 0.1) }],
   }));
 
   return (
@@ -38,10 +43,10 @@ export function ControlButton({ icon, accessibilityLabel, onPress, disabled, col
       hitSlop={10}
       onPress={onPress}
       onPressIn={() => {
-        pressed.set(withSpring(0.9, { damping: 20, stiffness: 400 }));
+        pressed.set(withTiming(PressScale.control, Timing.pressIn));
       }}
       onPressOut={() => {
-        pressed.set(withSpring(1, { damping: 14, stiffness: 300 }));
+        pressed.set(withSpring(1, Spring.press));
       }}>
       <Animated.View style={style}>
         <Glass
@@ -49,7 +54,10 @@ export function ControlButton({ icon, accessibilityLabel, onPress, disabled, col
           intensity={50}
           strong
           style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name={icon} size={size * 0.44} color={color} />
+          {/* Pause ↔ resume glyphs cross-fade instead of snapping. */}
+          <FadeSwap swapKey={icon}>
+            <Ionicons name={icon} size={size * 0.44} color={color} />
+          </FadeSwap>
         </Glass>
       </Animated.View>
     </Pressable>

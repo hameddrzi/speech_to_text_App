@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
+import { Duration, Easings, Timing, Travel, useMotion } from '@/constants/motion';
 import { Colors, Spacing, Type } from '@/constants/theme';
 import type { RecordPhase, WaveSample } from '@/hooks/record-session';
 
@@ -37,23 +38,33 @@ export function LiveWaveform({ samples, phase, tickMs, height, hint }: Props) {
 
   const shift = useSharedValue(0);
   const presence = useSharedValue(active ? 1 : 0);
+  const { reduced, distance } = useMotion();
+  const hintDrop = distance(Travel.hint);
+  const playheadGrow = reduced ? 0 : 0.15;
 
   // Each new bar arrives shifted one step right and glides into place over one tick.
+  // (With reduced motion Reanimated skips the glide and bars simply step.)
   useEffect(() => {
     if (!lastId) return;
-    shift.value = STEP;
-    shift.value = withTiming(0, { duration: tickMs, easing: Easing.linear });
+    shift.set(STEP);
+    shift.set(withTiming(0, { duration: tickMs, easing: Easings.linear }));
   }, [lastId, tickMs, shift]);
 
+  // Waking up: the hint sinks away and the playhead fades in. Opacity, so it also runs with reduced motion.
   useEffect(() => {
-    presence.value = withTiming(active ? 1 : 0, { duration: 320 });
+    presence.set(
+      withTiming(active ? 1 : 0, { ...Timing.fade, duration: Duration.slow, easing: active ? Easings.out : Easings.inOut }),
+    );
   }, [active, presence]);
 
-  const trackStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shift.value }] }));
-  const playheadStyle = useAnimatedStyle(() => ({ opacity: presence.value }));
+  const trackStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shift.get() }] }));
+  const playheadStyle = useAnimatedStyle(() => ({
+    opacity: presence.get(),
+    transform: [{ scaleY: 1 - playheadGrow + presence.get() * playheadGrow }],
+  }));
   const hintStyle = useAnimatedStyle(() => ({
-    opacity: 1 - presence.value,
-    transform: [{ translateY: presence.value * 6 }],
+    opacity: 1 - presence.get(),
+    transform: [{ translateY: presence.get() * hintDrop }],
   }));
 
   const onLayout = (e: LayoutChangeEvent) => setWidth(Math.round(e.nativeEvent.layout.width));

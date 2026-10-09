@@ -1,8 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Duration, riseIn, Travel, useMotion } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -30,8 +31,10 @@ const BARS = [0.35, 0.6, 0.9, 0.55, 1, 0.7, 0.4, 0.8, 0.5, 0.3];
 /** Glass "illustration" card: a stacked waveform plate with a floating glass badge. */
 export function EmptyState({ kind, query = '' }: Props) {
   const copy = COPY[kind];
+  const { reduced } = useMotion();
   return (
-    <Animated.View entering={FadeInDown.duration(320)} style={styles.wrap}>
+    // Keyed by kind in the list, so switching filters into another empty state also eases in.
+    <Animated.View entering={riseIn(reduced, { duration: Duration.slow, distance: Travel.empty })} style={styles.wrap}>
       <Glass strong radius={Radius.xl} style={styles.card}>
         <View style={styles.art}>
           <Glass radius={Radius.lg} elevated={false} style={[styles.plate, styles.plateBack]} />

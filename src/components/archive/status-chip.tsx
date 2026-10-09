@@ -2,6 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Shimmer } from '@/components/archive/shimmer';
+import { FadeSwap } from '@/components/fade-swap';
+import { Duration } from '@/constants/motion';
 import { Colors, Radius, Spacing } from '@/constants/theme';
 import type { TranscriptStatus } from '@/data/recordings';
 
@@ -14,11 +16,19 @@ type Props = {
 
 /**
  * Tiny transcript-state chip: done ✓, processing (shimmering), waiting for a model, failed (tap to retry).
- * Renders nothing for 'none'.
+ * Renders nothing for 'none'. When the state changes (e.g. Transcribing → Transcript) the new chip fades in.
  */
 export function StatusChip({ status, waitingForModel, onRetry }: Props) {
   if (status === 'none') return null;
+  const kind = status === 'processing' && waitingForModel ? 'waiting' : status;
+  return (
+    <FadeSwap swapKey={kind} duration={Duration.base}>
+      <ChipContent status={status} waitingForModel={waitingForModel} onRetry={onRetry} />
+    </FadeSwap>
+  );
+}
 
+function ChipContent({ status, waitingForModel, onRetry }: Props) {
   if (status === 'done') {
     return (
       <View style={[styles.chip, { backgroundColor: Colors.successSoft }]} accessibilityLabel="Transcribed">

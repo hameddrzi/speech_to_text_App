@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 
 import { Glass } from '@/components/glass';
+import { Stagger, Timing } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import { formatDuration, formatTotalTime } from '@/utils/format';
@@ -56,15 +57,28 @@ function StatTile({ icon, color, value, label }: { icon: IconName; color: string
   );
 }
 
+const MIN_BAR = 4;
+
+/**
+ * One day's bar. It grows in once, rising out of the chart's baseline (a translate inside a clipped slot, so
+ * the rounded top keeps its shape and nothing re-lays out). Later data changes just resize it.
+ */
 function Bar({ fraction, index, highlight }: { fraction: number; index: number; highlight: boolean }) {
-  const h = useSharedValue(0);
+  const barHeight = Math.max(MIN_BAR, fraction * CHART_HEIGHT);
+  const hidden = useSharedValue(1);
   useEffect(() => {
-    h.set(withDelay(index * 45, withSpring(fraction, { damping: 18, stiffness: 140 })));
-  }, [fraction, index, h]);
-  const style = useAnimatedStyle(() => ({ height: Math.max(4, h.value * CHART_HEIGHT) }));
+    hidden.set(withDelay(index * Stagger.step, withTiming(0, Timing.progress)));
+  }, [index, hidden]);
+  const style = useAnimatedStyle(() => ({ transform: [{ translateY: hidden.get() * (barHeight + 1) }] }));
   return (
     <View style={styles.barSlot}>
-      <Animated.View style={[styles.bar, { backgroundColor: highlight ? Colors.record : 'rgba(255,59,48,0.28)' }, style]} />
+      <Animated.View
+        style={[
+          styles.bar,
+          { height: barHeight, backgroundColor: highlight ? Colors.record : 'rgba(255,59,48,0.28)' },
+          style,
+        ]}
+      />
     </View>
   );
 }
@@ -194,6 +208,7 @@ const styles = StyleSheet.create({
   barSlot: {
     height: CHART_HEIGHT,
     width: '100%',
+    overflow: 'hidden',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },

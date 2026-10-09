@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, {
-  Easing,
+  cancelAnimation,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -11,7 +11,9 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { FadeSwap } from '@/components/fade-swap';
 import { Glass } from '@/components/glass';
+import { Duration, Easings, fadeIn, fadeOut, useMotion } from '@/constants/motion';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
 
 type Props = {
@@ -26,12 +28,66 @@ type Props = {
 };
 
 /**
+ * Index where `next` stops matching `prev`, moved back to the start of that word. Whisper's rolling
+ * preview rewrites the last few words as it hears more, so the "new" part starts at the first change.
+ */
+function freshStart(prev: string, next: string): number {
+  const n = Math.min(prev.length, next.length);
+  let i = 0;
+  while (i < n && prev[i] === next[i]) i++;
+  if (i === next.length) return i;
+  while (i > 0 && !/\s/.test(next[i - 1])) i--;
+  return i;
+}
+
+/**
+ * Newly arrived words fade in while the rest of the text stays put. The text is drawn twice with identical
+ * layout: the base layer shows the settled words (new ones transparent), and an overlay layer shows only
+ * the new words and fades in. Only a View's opacity animates, so line wrapping can never jump.
+ */
+function StreamingText({ text }: { text: string }) {
+  const [shown, setShown] = useState({ text, split: text.length, version: 0 });
+  // Adjust state during render when new text arrives (no extra effect pass, no one-frame flash).
+  if (text !== shown.text) {
+    setShown({ text, split: freshStart(shown.text, text), version: shown.version + 1 });
+  }
+  const settled = shown.text.slice(0, shown.split);
+  const fresh = shown.text.slice(shown.split);
+
+  return (
+    <View>
+      <Text style={styles.body} accessibilityLiveRegion="polite">
+        {settled}
+        <Text style={styles.transparent}>{fresh}</Text>
+      </Text>
+      {fresh.length > 0 ? (
+        <Animated.View
+          key={shown.version}
+          entering={fadeIn(Duration.slow)}
+          style={StyleSheet.absoluteFill}
+          pointerEvents="none"
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants">
+          <Text style={styles.body}>
+            <Text style={styles.transparent}>{settled}</Text>
+            {fresh}
+          </Text>
+        </Animated.View>
+      ) : null}
+    </View>
+  );
+}
+
+/**
  * Frosted card where live speech-to-text will stream.
  * The STT core only needs to feed `text` (and `active`); the card handles scrolling and empty states.
  */
 export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   const hasText = text.trim().length > 0;
+  const placeholder = active
+    ? (hint ?? 'Listening… your words will appear here in a moment.')
+    : (hint ?? 'Your words will appear here live while you record.');
 
   return (
     <Glass radius={Radius.lg} intensity={45} style={styles.card}>
@@ -41,10 +97,10 @@ export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
           <Text style={styles.title}>Live transcript</Text>
         </View>
         {active ? (
-          <View style={styles.listening}>
+          <Animated.View entering={fadeIn(Duration.base)} exiting={fadeOut()} style={styles.listening}>
             <Text style={styles.listeningText}>Listening</Text>
             <Dots />
-          </View>
+          </Animated.View>
         ) : null}
       </View>
 
@@ -54,17 +110,11 @@ export function LiveTranscriptCard({ text, active, hint, height = 64 }: Props) {
         showsVerticalScrollIndicator={false}
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}>
         {hasText ? (
-          <Text
-            style={styles.body}
-            accessibilityLiveRegion="polite">
-            {text}
-          </Text>
+          <StreamingText text={text} />
         ) : (
-          <Text style={styles.placeholder}>
-            {active
-              ? (hint ?? 'Listening… your words will appear here in a moment.')
-              : (hint ?? 'Your words will appear here live while you record.')}
-          </Text>
+          <FadeSwap swapKey={placeholder} duration={Duration.base}>
+            <Text style={styles.placeholder}>{placeholder}</Text>
+          </FadeSwap>
         )}
       </ScrollView>
     </Glass>
@@ -81,25 +131,26 @@ function Dots() {
   );
 }
 
+const DOT_HALF_PERIOD = 420;
+
 function Dot({ delay }: { delay: number }) {
   const v = useSharedValue(0);
+  // With reduced motion the dots stay still (and fully visible).
+  const { reduced } = useMotion();
 
   useEffect(() => {
-    v.value = withDelay(
-      delay,
-      withRepeat(
-        withSequence(
-          withTiming(1, { duration: 420, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0, { duration: 420, easing: Easing.inOut(Easing.quad) }),
-        ),
-        -1,
-      ),
-    );
-  }, [delay, v]);
+    if (reduced) {
+      v.set(1);
+      return;
+    }
+    const half = { duration: DOT_HALF_PERIOD, easing: Easings.breathe };
+    v.set(withDelay(delay, withRepeat(withSequence(withTiming(1, half), withTiming(0, half)), -1)));
+    return () => cancelAnimation(v);
+  }, [delay, v, reduced]);
 
   const style = useAnimatedStyle(() => ({
-    opacity: 0.25 + v.value * 0.75,
-    transform: [{ translateY: -v.value * 2 }],
+    opacity: 0.25 + v.get() * 0.75,
+    transform: [{ translateY: -v.get() * 2 }],
   }));
 
   return <Animated.View style={[styles.dot, style]} />;
@@ -150,6 +201,9 @@ const styles = StyleSheet.create({
   body: {
     ...Type.callout,
     lineHeight: 22,
+  },
+  transparent: {
+    color: 'transparent',
   },
   placeholder: {
     ...Type.footnote,
