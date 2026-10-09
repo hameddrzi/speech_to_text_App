@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Glass } from '@/components/glass';
 import { PressScale, Spring, Timing } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, Shadow, Spacing, TabBarBottomGap, TabBarHeight } from '@/constants/theme';
+import { Colors, FontScaleCap, Radius, Shadow, Spacing, TabBarBottomGap, TabBarHeight } from '@/constants/theme';
 import { haptic } from '@/utils/haptics';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -65,6 +65,8 @@ function TabItem({
       testID={meta.testID}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
+      // react-native-web doesn't map accessibilityState; aria-selected reaches the DOM (and native merges it).
+      aria-selected={focused}
       accessibilityLabel={meta.label}
       onPress={onPress}
       onPressIn={() => {
@@ -82,7 +84,9 @@ function TabItem({
           <Ionicons name={meta.iconActive} size={ICON_SIZE} color={activeColor} />
         </Animated.View>
       </Animated.View>
-      <Animated.Text style={[styles.label, labelStyle]}>{meta.label}</Animated.Text>
+      <Animated.Text style={[styles.label, labelStyle]} maxFontSizeMultiplier={FontScaleCap.control}>
+        {meta.label}
+      </Animated.Text>
     </Pressable>
   );
 }

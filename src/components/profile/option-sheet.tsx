@@ -5,7 +5,7 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { Duration } from '@/constants/motion';
 import { optionSheetIds } from '@/constants/test-ids';
-import { Colors, Radius, Spacing, Type } from '@/constants/theme';
+import { Colors, Radius, Spacing, TextButtonHitArea, Type } from '@/constants/theme';
 import type { Option } from '@/store/settings';
 
 type Props<T extends string> = {
@@ -43,7 +43,8 @@ export function OptionSheet<T extends string>({
           <Pressable
             testID={ids?.done}
             onPress={onClose}
-            hitSlop={10}
+            hitSlop={6}
+            style={TextButtonHitArea}
             accessibilityRole="button"
             accessibilityLabel="Done">
             <Text style={styles.done}>Done</Text>

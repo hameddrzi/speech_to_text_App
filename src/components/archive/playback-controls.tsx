@@ -56,15 +56,20 @@ export function PlayButton({
   playing,
   onPress,
   large = false,
+  size: sizeProp,
+  disabled = false,
   testID,
 }: {
   playing: boolean;
   onPress: () => void;
   large?: boolean;
+  disabled?: boolean;
+  /** Disc diameter for `large` (default 72), e.g. smaller in the compact landscape dock. */
+  size?: number;
   testID?: string;
 }) {
-  const size = large ? 72 : 48;
-  const iconSize = large ? 32 : 34;
+  const size = sizeProp ?? (large ? 72 : 48);
+  const iconSize = large ? Math.round(size * 0.44) : 34;
   const color = large ? '#FFFFFF' : Colors.label;
   const p = useSharedValue(playing ? 1 : 0);
   const pressed = useSharedValue(1);
@@ -98,10 +103,18 @@ export function PlayButton({
       onPressOut={() => {
         pressed.set(withSpring(1, Spring.press));
       }}
+      disabled={disabled}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       accessibilityLabel={playing ? 'Pause' : 'Play'}>
       <Animated.View
-        style={[styles.play, { width: size, height: size, borderRadius: size / 2 }, large && styles.playLarge, discStyle]}>
+        style={[
+          styles.play,
+          { width: size, height: size, borderRadius: size / 2 },
+          large && styles.playLarge,
+          disabled && styles.playDisabled,
+          discStyle,
+        ]}>
         <Animated.View style={[styles.playIcon, playStyle]} pointerEvents="none">
           <Ionicons name="play" size={iconSize} color={color} style={{ marginLeft: iconSize * 0.1 }} />
         </Animated.View>
@@ -188,6 +201,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 8 },
+  },
+  playDisabled: {
+    opacity: 0.3,
   },
   playIcon: {
     position: 'absolute',

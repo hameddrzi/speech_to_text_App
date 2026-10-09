@@ -6,6 +6,7 @@ import { MOCK_RECORDINGS, type Recording } from '@/data/recordings';
 import { useSettings, type AutoDeletePolicy } from '@/store/settings';
 import { resolveRecordingUri, stripVolatileFields } from '@/utils/recording-files';
 import { readJSONWithStatus, writeRawJSON } from '@/utils/storage';
+import { deleteWebAudio } from '@/utils/web-audio';
 
 type RecordingsContextValue = {
   recordings: Recording[];
@@ -30,8 +31,12 @@ const DAY_MS = 86_400_000;
 const MAX_AGE: Record<AutoDeletePolicy, number> = { never: Infinity, '30d': 30 * DAY_MS, '1y': 365 * DAY_MS };
 
 function deleteAudio(uri: string | null) {
+  if (Platform.OS === 'web') {
+    deleteWebAudio(uri);
+    return;
+  }
   const resolved = resolveRecordingUri(uri);
-  if (!resolved || Platform.OS === 'web') return;
+  if (!resolved) return;
   try {
     const f = new File(resolved);
     if (f.exists) f.delete();

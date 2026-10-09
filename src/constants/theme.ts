@@ -115,3 +115,49 @@ export const Shadow = {
 export const TabBarHeight = 64;
 export const TabBarBottomGap = 12;
 export const ScreenPadding = Spacing.xl;
+
+/**
+ * Content column width on wide windows (unfolded foldables, tablets). Screens center their content in a
+ * column this wide; backgrounds, bars and blobs stay full-bleed.
+ */
+export const ContentMaxWidth = 640;
+
+/** Windows shorter than this (phones in landscape, split screen) switch to their compact, scrollable layouts. */
+export const ShortWindowHeight = 560;
+
+/** Minimum touch target (Apple HIG 44 pt; Android's 48 dp is met by most rows). */
+export const MinTouchTarget = 44;
+
+/**
+ * hitSlop that grows a control drawn `width` × `height` to at least the 44 pt touch target, without
+ * changing how it looks. (react-native-web ignores hitSlop; on web, prefer padding where visuals allow.)
+ */
+export function touchSlop(width: number, height: number = width, min: number = MinTouchTarget) {
+  const h = Math.max(0, Math.ceil((min - width) / 2));
+  const v = Math.max(0, Math.ceil((min - height) / 2));
+  return { top: v, bottom: v, left: h, right: h };
+}
+
+/**
+ * Text-button touch area: invisible padding cancelled by an equal negative margin, so a word-sized
+ * button ("Done", "Save") gets a 44 pt target on every platform (including web) and the layout doesn't move.
+ */
+export const TextButtonHitArea = {
+  paddingVertical: Spacing.md,
+  marginVertical: -Spacing.md,
+  paddingHorizontal: Spacing.sm,
+  marginHorizontal: -Spacing.sm,
+} as const;
+
+/**
+ * `maxFontSizeMultiplier` for text inside fixed-size elements. Text everywhere else scales freely with
+ * the system text size; these few caps only stop fixed-height pills, chips and the timer from clipping.
+ */
+export const FontScaleCap = {
+  /** Tiny chips and pills (status chip, model pill). */
+  chip: 1.4,
+  /** Tab bar labels, segmented-control labels. */
+  control: 1.5,
+  /** The 56 pt recording timer: already huge, only a little growth fits. */
+  timer: 1.2,
+} as const;

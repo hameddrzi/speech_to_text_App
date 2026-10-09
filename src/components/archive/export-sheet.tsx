@@ -7,7 +7,7 @@ import { BottomSheet } from '@/components/bottom-sheet';
 import { Glass } from '@/components/glass';
 import { Duration, fadeIn } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, Spacing, Type } from '@/constants/theme';
+import { Colors, Radius, Spacing, TextButtonHitArea, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import {
   EXPORT_CAPABILITIES,
@@ -146,7 +146,8 @@ export function ExportSheet({ visible, recording, onClose }: Props) {
             testID={TestIDs.exportSheet.done}
             onPress={close}
             disabled={busy}
-            hitSlop={10}
+            hitSlop={6}
+            style={TextButtonHitArea}
             accessibilityRole="button"
             accessibilityLabel="Done">
             <Text style={[styles.done, busy && styles.disabledText]}>Done</Text>

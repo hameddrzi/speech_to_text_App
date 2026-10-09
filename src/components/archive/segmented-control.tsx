@@ -5,7 +5,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { haptic } from '@/utils/haptics';
 import { Glass } from '@/components/glass';
 import { Spring } from '@/constants/motion';
-import { Colors, Radius, Shadow } from '@/constants/theme';
+import { Colors, FontScaleCap, MinTouchTarget, Radius, Shadow } from '@/constants/theme';
 
 type Props<T extends string> = {
   options: readonly { value: T; label: string; testID?: string }[];
@@ -14,6 +14,9 @@ type Props<T extends string> = {
 };
 
 const PAD = 3;
+const TRACK_HEIGHT = 36;
+/** Extra touch area above and below the track. */
+const HIT_EXTRA = (MinTouchTarget - TRACK_HEIGHT) / 2;
 
 /** Glass segmented control with a sliding white lens, matching the tab bar. */
 export function SegmentedControl<T extends string>({ options, value, onChange }: Props<T>) {
@@ -38,14 +41,12 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
   const lensStyle = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
 
   return (
-    <Glass
-      radius={Radius.sm}
-      elevated={false}
-      intensity={30}
-      style={styles.track}
-      accessibilityRole="tablist"
-      onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      {itemWidth > 0 && <Animated.View style={[styles.lens, { width: itemWidth }, lensStyle]} />}
+    // The visible track is TRACK_HEIGHT tall, but the segments are laid over an area MinTouchTarget tall
+    // (the extra height is cancelled by negative margins, so nothing around it moves).
+    <View style={styles.hitArea} accessibilityRole="tablist" onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <Glass radius={Radius.sm} elevated={false} intensity={30} style={styles.track}>
+        {itemWidth > 0 && <Animated.View style={[styles.lens, { width: itemWidth }, lensStyle]} />}
+      </Glass>
       <View style={styles.row}>
         {options.map((o) => {
           const selected = o.value === value;
@@ -56,24 +57,36 @@ export function SegmentedControl<T extends string>({ options, value, onChange }:
               style={styles.item}
               accessibilityRole="tab"
               accessibilityState={{ selected }}
+              aria-selected={selected}
               accessibilityLabel={o.label}
               onPress={() => {
                 if (selected) return;
                 haptic.selection();
                 onChange(o.value);
               }}>
-              <Text style={[styles.label, selected && styles.labelSelected]}>{o.label}</Text>
+              <Text style={[styles.label, selected && styles.labelSelected]} maxFontSizeMultiplier={FontScaleCap.control}>
+                {o.label}
+              </Text>
             </Pressable>
           );
         })}
       </View>
-    </Glass>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  hitArea: {
+    paddingHorizontal: PAD,
+    marginVertical: -HIT_EXTRA,
+    height: MinTouchTarget,
+  },
   track: {
-    height: 34,
+    position: 'absolute',
+    top: HIT_EXTRA,
+    left: 0,
+    right: 0,
+    height: TRACK_HEIGHT,
     padding: PAD,
     backgroundColor: 'rgba(118,118,128,0.08)',
   },

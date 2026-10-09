@@ -5,7 +5,7 @@ import { Shimmer } from '@/components/archive/shimmer';
 import { FadeSwap } from '@/components/fade-swap';
 import { Duration } from '@/constants/motion';
 import { TestIDs } from '@/constants/test-ids';
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Colors, FontScaleCap, Radius, Spacing, touchSlop } from '@/constants/theme';
 import type { TranscriptStatus } from '@/data/recordings';
 
 type Props = {
@@ -37,7 +37,7 @@ function ChipContent({ status, waitingForModel, onRetry }: Props) {
         style={[styles.chip, { backgroundColor: Colors.successSoft }]}
         accessibilityLabel="Transcribed">
         <Ionicons name="checkmark-circle" size={12} color={Colors.success} />
-        <Text style={[styles.text, { color: Colors.successText }]}>Transcript</Text>
+        <Text maxFontSizeMultiplier={FontScaleCap.chip} style={[styles.text, { color: Colors.successText }]}>Transcript</Text>
       </View>
     );
   }
@@ -49,7 +49,7 @@ function ChipContent({ status, waitingForModel, onRetry }: Props) {
         style={[styles.chip, { backgroundColor: Colors.warningSoft }]}
         accessibilityLabel="Waiting for a speech model">
         <Ionicons name="hourglass-outline" size={11} color="#B86E00" />
-        <Text style={[styles.text, { color: Colors.warningText }]}>Waiting</Text>
+        <Text maxFontSizeMultiplier={FontScaleCap.chip} style={[styles.text, { color: Colors.warningText }]}>Waiting</Text>
       </View>
     );
   }
@@ -62,7 +62,7 @@ function ChipContent({ status, waitingForModel, onRetry }: Props) {
         accessibilityLabel="Transcribing">
         <Shimmer style={StyleSheet.absoluteFill} base="transparent" highlight="rgba(255,255,255,0.9)" />
         <Ionicons name="sparkles" size={11} color={Colors.tint} />
-        <Text style={[styles.text, { color: Colors.tint }]}>Transcribing</Text>
+        <Text maxFontSizeMultiplier={FontScaleCap.chip} style={[styles.text, { color: Colors.tint }]}>Transcribing</Text>
       </View>
     );
   }
@@ -71,22 +71,27 @@ function ChipContent({ status, waitingForModel, onRetry }: Props) {
     <Pressable
       testID={TestIDs.archive.chipRetry}
       onPress={onRetry}
-      hitSlop={8}
+      // The chip is drawn 20 pt tall; the slop brings the target to 44 pt.
+      hitSlop={RETRY_SLOP}
       accessibilityRole="button"
       accessibilityLabel="Transcription failed. Retry"
       style={({ pressed }) => [styles.chip, { backgroundColor: Colors.recordSoft, opacity: pressed ? 0.6 : 1 }]}>
       <Ionicons name="refresh" size={11} color={Colors.record} />
-      <Text style={[styles.text, { color: Colors.record }]}>Retry</Text>
+      <Text maxFontSizeMultiplier={FontScaleCap.chip} style={[styles.text, { color: Colors.record }]}>Retry</Text>
     </Pressable>
   );
 }
+
+const CHIP_HEIGHT = 20;
+/** "Retry" chip is about 56 pt wide; only its height needs the slop. */
+const RETRY_SLOP = touchSlop(56, CHIP_HEIGHT);
 
 const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    height: 20,
+    height: CHIP_HEIGHT,
     paddingHorizontal: Spacing.sm - 1,
     borderRadius: Radius.pill,
     overflow: 'hidden',
