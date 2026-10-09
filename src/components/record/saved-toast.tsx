@@ -14,7 +14,6 @@ type Props = {
   onDismiss: () => void;
   /** Auto-dismiss delay. */
   duration?: number;
-  top: number;
 };
 
 // Opacity-led timing curves (ease-out in, ease-in out); they keep running as a plain fade with reduced motion.
@@ -23,9 +22,10 @@ const HIDE = { ...Timing.exit, reduceMotion: Timing.fade.reduceMotion };
 
 /**
  * Floating glass confirmation shown after a take is saved, with a "View" shortcut to the archive.
- * It fades in with a short slide from just above its spot, and fades out the same way before unmounting.
+ * It sits over the (idle) Live Transcript card so the screen header stays readable; it fades in with a short
+ * slide up into place and fades out before unmounting.
  */
-export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: Props) {
+export function SavedToast({ title, onView, onDismiss, duration = 3000 }: Props) {
   const shown = useSharedValue(0);
   const lift = useMotion().distance(Travel.toast);
 
@@ -50,11 +50,11 @@ export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: P
 
   const style = useAnimatedStyle(() => ({
     opacity: shown.get(),
-    transform: [{ translateY: (1 - shown.get()) * -lift }],
+    transform: [{ translateY: (1 - shown.get()) * lift }],
   }));
 
   return (
-    <Animated.View testID={TestIDs.record.savedToast} style={[styles.wrap, { top }, style]} pointerEvents="box-none">
+    <Animated.View testID={TestIDs.record.savedToast} style={[styles.wrap, style]} pointerEvents="box-none">
       <Glass radius={Radius.xl} intensity={70} strong style={styles.toast} accessibilityLiveRegion="polite">
         <View style={styles.check}>
           <Ionicons name="checkmark" size={16} color="#FFFFFF" />
@@ -80,15 +80,21 @@ export function SavedToast({ title, onView, onDismiss, duration = 3000, top }: P
 }
 
 const styles = StyleSheet.create({
+  // Fills the card it is placed over and centers on it.
   wrap: {
     position: 'absolute',
-    left: Spacing.lg,
-    right: Spacing.lg,
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    justifyContent: 'center',
     alignItems: 'center',
     zIndex: 10,
   },
   toast: {
     width: '100%',
+    // Covers the whole card underneath, so its label never peeks out around the toast.
+    height: '100%',
     maxWidth: 420,
     flexDirection: 'row',
     alignItems: 'center',
