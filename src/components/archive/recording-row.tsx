@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { haptic } from '@/utils/haptics';
+import { shareRecording } from '@/components/archive/actions';
 import { StatusChip } from '@/components/archive/status-chip';
 import { Glass } from '@/components/glass';
 import { Colors, Radius, Spacing, Type } from '@/constants/theme';
@@ -50,8 +51,9 @@ function SwipeAction({
   onPress: () => void;
 }) {
   const style = useAnimatedStyle(() => {
-    // Staggered reveal: the outer action pops in slightly after the inner one.
-    const p = interpolate(progress.get(), [0.15 + index * 0.15, 0.85 + index * 0.1], [0, 1], Extrapolation.CLAMP);
+    // Staggered reveal: each outer action pops in slightly after the inner one; the last one
+    // (index 2) still finishes exactly at full open.
+    const p = interpolate(progress.get(), [0.1 + index * 0.15, 0.7 + index * 0.15], [0, 1], Extrapolation.CLAMP);
     return { opacity: p, transform: [{ scale: 0.6 + 0.4 * p }] };
   });
   return (
@@ -69,7 +71,7 @@ function SwipeAction({
 
 /**
  * Voice Memos style row: title / date / duration / transcript preview.
- * Tap opens the recording page (full transcript + player); swipe left reveals favorite + delete.
+ * Tap opens the recording page (full transcript + player); swipe left reveals favorite, share and delete.
  */
 export const RecordingRow = memo(function RecordingRow({
   recording,
@@ -89,6 +91,11 @@ export const RecordingRow = memo(function RecordingRow({
     haptic.warning();
     const deleted = await onDelete(recording);
     if (!deleted) swipeRef.current?.close();
+  };
+
+  const handleShare = () => {
+    swipeRef.current?.close();
+    void shareRecording(recording);
   };
 
   const handleFavorite = () => {
@@ -136,6 +143,14 @@ export const RecordingRow = memo(function RecordingRow({
             <SwipeAction
               progress={progress}
               index={1}
+              icon="share-outline"
+              color={Colors.tint}
+              label="Share"
+              onPress={handleShare}
+            />
+            <SwipeAction
+              progress={progress}
+              index={2}
               icon="trash"
               color={Colors.record}
               label="Delete"

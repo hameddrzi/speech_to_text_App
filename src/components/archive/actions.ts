@@ -1,6 +1,8 @@
 import { Alert, Platform, Share } from 'react-native';
 
-import { transcriptText, type Recording } from '@/data/recordings';
+import type { Recording } from '@/data/recordings';
+import { haptic } from '@/utils/haptics';
+import { formatTranscriptForSharing } from '@/utils/transcript-text';
 
 /** Cross-platform destructive confirmation; resolves to whether the user confirmed. */
 export function confirmDelete(title: string): Promise<boolean> {
@@ -22,12 +24,19 @@ export function confirmDelete(title: string): Promise<boolean> {
   });
 }
 
-/** Share title + transcript text via the system sheet. */
+/**
+ * Shares the recording as plain text (title, date · duration, transcript) via the system sheet.
+ * Works for every transcript state — without a transcript it shares a short note instead.
+ */
 export async function shareRecording(r: Recording): Promise<void> {
-  const text = transcriptText(r);
+  haptic.light();
+  const message = formatTranscriptForSharing(r);
   try {
+    // Only `message`: on Android it becomes EXTRA_TEXT. `content.title` would become EXTRA_SUBJECT,
+    // which apps like Telegram prepend to the text (title twice). No `url` either — on iOS some
+    // apps drop the text when both are present.
     // TODO: share the audio file itself (expo-sharing) once recordings have a real uri.
-    await Share.share({ title: r.title, message: text ? `${r.title}\n\n${text}` : r.title });
+    await Share.share({ message }, { dialogTitle: r.title, subject: r.title });
   } catch {
     // Dismissed or unsupported on this platform — nothing to do.
   }
