@@ -46,13 +46,18 @@ it needs no Metro server, has no dev menu overlays and behaves like what users i
 ```bash
 npx expo prebuild --platform android          # only if android/ doesn't exist yet
 cd android
-./gradlew app:assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+./gradlew app:assembleRelease --no-daemon
 cd ..
-# → android/app/build/outputs/apk/release/app-release.apk (installs on 64- and 32-bit phones)
+# → android/app/build/outputs/apk/release/app-release.apk
+#   (all four ABIs: installs on 32- and 64-bit phones and x86_64 emulators)
 ```
 
-Or in the cloud: `npx eas-cli@latest build --platform android --profile preview` (needs an
-`eas.json` profile that builds an APK) and download the APK.
+Or in the cloud: `npx eas-cli@latest build --platform android --profile preview` (the `preview`
+profile in `eas.json` builds an all-ABI APK) and download the APK.
+
+Keep using the same signing key for the test phones as for your own installs: an APK signed with a
+different key can't update the installed app, and uninstalling it deletes all recordings. See
+[Build for distribution](../README.md#build-for-distribution) for setting up the key.
 
 For iOS, build for the simulator (`npx expo run:ios --configuration Release`) and run the suite on
 the booted simulator.
