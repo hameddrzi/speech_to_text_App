@@ -31,6 +31,10 @@ pills and tab bar.
 - Status chips per recording: *Transcribing*, *Waiting* (no speech model yet), *Transcript*, *Retry*.
 - Detail screen with a scrubbable waveform, playback speed, ±15 s skip, rename, favorite and delete.
 - Time-coded transcript that highlights and follows the audio as it plays; tap a line to jump there; copy all text.
+- **Export** (download button next to Share): save the transcript as a designed **PDF** (title, date, duration and word count chips,
+  the waveform, and every line with its timestamp) or as **Markdown** (`.md`) for notes apps. On Android the file is saved
+  into a folder you pick once (remembered, changeable); *Share file…* sends it anywhere else. On iOS it opens the share
+  sheet (*Save to Files*). On web, Markdown downloads and the PDF opens the print dialog (*Save as PDF*).
 
 **Profile**
 - Your name (optional, stays on the phone) and weekly activity stats.
@@ -135,6 +139,7 @@ src/
 │   ├── archive/              # Rows, search, playback hook, transcript card, scrubber…
 │   └── profile/              # Settings list, option and name sheets, stats…
 ├── stt/                      # On-device speech-to-text (Whisper)
+├── export/                   # Transcript export: Markdown, PDF template (expo-print), save/share
 ├── hooks/                    # Recording session (native + web variants)
 ├── store/                    # Recordings and settings (React context + JSON persistence)
 ├── data/                     # Recording types and web preview sample data

@@ -111,6 +111,7 @@ Everything is stored in the app's private document directory. Nothing is synced 
 |---|---|
 | `recordings.json` | All recording metadata and transcripts |
 | `settings.json` | User settings |
+| `export.json` | Android only: the folder picked for exports (SAF URI) |
 | `recordings/rec-<id>.wav` | Audio, 16 kHz mono 16-bit (about 1.9 MB per minute) |
 | `models/ggml-*.bin` | Downloaded Whisper models |
 | `models/ggml-*.bin.part` | A model download in progress (renamed only when complete) |
@@ -150,6 +151,23 @@ React Native picks `*.native.ts` on phones and the plain `.ts` file on web:
 
 The web build exists so the UI can be previewed in a browser. It starts with sample recordings
 from `src/data/recordings.ts`; the phone app starts empty.
+
+## Export
+
+The download button on the detail screen opens `ExportSheet` (`src/components/archive/export-sheet.tsx`),
+which hands the recording to `src/export/`:
+
+| File | Role |
+|---|---|
+| `shared.ts` | Pure helpers: file names (`Product-team-meeting.pdf`), word count, dates, and the honest "transcript not available" reason |
+| `markdown.ts` | `recordingToMarkdown(recording)`: title, metadata list, then `**[m:ss]** text` per segment (user text is escaped) |
+| `pdf-template.ts` | `renderTranscriptHtml(recording)`: a self-contained A4 HTML page in the app's look (pastel blobs, chips, waveform SVG, timestamp pills, `@page` footer with page numbers). Pure, so it can be opened in a browser to preview |
+| `pdf.ts` | Renders that HTML with `expo-print` and moves the result to `<cache>/exports/<Title>.pdf` |
+| `deliver.native.ts` | Writes the file to `<cache>/exports/` and delivers it: Android saves into a folder picked with `Directory.pickDirectoryAsync()` (SAF; the URI is remembered in `export.json`), iOS and "Share file…" use `expo-sharing` |
+| `deliver.ts` | Web: Markdown as a browser download, PDF through the browser print dialog (expo-print can't write files on web) |
+
+If a recording isn't transcribed yet (or failed, or no speech was found), both formats still export, with a note saying
+why there is no transcript instead of an empty page.
 
 ## Conventions
 
