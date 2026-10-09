@@ -25,6 +25,7 @@ import { TestIDs } from '@/constants/test-ids';
 import { Colors, Radius, ScreenPadding, Shadow, Spacing, Type } from '@/constants/theme';
 import type { Recording } from '@/data/recordings';
 import { useRecordings } from '@/store/recordings';
+import { cancelPatch, retryPatch } from '@/stt/job-recovery';
 import { formatDuration, formatRecordingDate } from '@/utils/format';
 
 const HEADER_HEIGHT = 56;
@@ -187,7 +188,12 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
 
   const onRetry = useCallback(() => {
     // The TranscriptionWorker picks up anything in 'processing' and runs it on device.
-    updateRecording(recording.id, { transcriptStatus: 'processing', transcriptError: undefined });
+    updateRecording(recording.id, retryPatch());
+  }, [recording.id, updateRecording]);
+
+  const onCancelTranscription = useCallback(() => {
+    // The TranscriptionWorker sees the recording leave 'processing' and stops the native job.
+    updateRecording(recording.id, cancelPatch());
   }, [recording.id, updateRecording]);
 
   const onDelete = async () => {
@@ -225,6 +231,7 @@ function RecordingDetail({ recording, initialPosition }: { recording: Recording;
             position={pb.position}
             onSeek={onSegmentSeek}
             onRetry={onRetry}
+            onCancel={onCancelTranscription}
             onActiveSegmentChange={onActiveSegmentChange}
           />
         </View>

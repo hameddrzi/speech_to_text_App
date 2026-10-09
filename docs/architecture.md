@@ -74,6 +74,12 @@ type Recording = {
   favorite: boolean;
   transcriptProgress?: number;   // 0–1 while transcribing
   transcriptError?: string;      // shown with the Retry button
+  transcriptAttempts?: number;   // job starts that haven't finished (crash-loop guard)
+  transcriptPartial?: {          // long recordings: chunks already transcribed
+    segments: TranscriptSegment[];
+    nextOffsetSec: number;       // where the next chunk starts
+    model: string;               // a different model starts over
+  };
 };
 ```
 
@@ -87,9 +93,23 @@ and `toggleFavorite`. Every change is written back to disk right away.
   `'done'` (with segments) or `'failed'` (with a message).
 - If the selected speech model isn't downloaded, the job waits (shown as *Waiting* in the Archive) and
   starts as soon as the model is installed.
-- **Retry** only sets the status back to `'processing'`.
-- A job interrupted because the app was closed is still `'processing'` on the next launch, so it
-  starts again automatically.
+- **Retry** sets the status back to `'processing'` and resets `transcriptAttempts` (`retryPatch` in
+  `src/stt/job-recovery.ts`).
+- **Cancel** (detail screen) sets `'none'` and clears the job fields (`cancelPatch`); the worker sees
+  the running recording leave `'processing'` and stops the native job.
+- Before each start the worker increments `transcriptAttempts` and makes sure it is on disk. A job
+  interrupted because the app was closed is still `'processing'` on the next launch and starts again
+  (long recordings resume after the last chunk saved in `transcriptPartial`). If it was already
+  started twice without finishing (the app was killed, e.g. out of memory), it is set to `'failed'`
+  instead, so it can't crash the app on every launch.
+
+```
+none ──Transcribe──► processing ──► done      (attempts / partial cleared)
+                      │  ▲    └───► failed    (error, or killed twice: attempts ≥ 2)
+                Cancel│  │Retry/Transcribe
+                      ▼  │
+                      none / failed
+```
 
 ### Settings: `src/store/settings.tsx`
 

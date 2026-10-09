@@ -25,6 +25,22 @@ export type Recording = {
   transcriptProgress?: number;
   /** Human-readable reason when transcriptStatus is 'failed'. */
   transcriptError?: string;
+  /**
+   * How many times the background job was started without finishing. Written to disk before the
+   * native call, so a job that keeps killing the app is failed instead of restarted (see job-recovery.ts).
+   */
+  transcriptAttempts?: number;
+  /** Chunks of a long recording already transcribed, so a killed job resumes instead of starting over. */
+  transcriptPartial?: TranscriptPartial;
+};
+
+export type TranscriptPartial = {
+  /** Segments of the finished chunks, in recording time. */
+  segments: TranscriptSegment[];
+  /** Where the next chunk starts (seconds). */
+  nextOffsetSec: number;
+  /** Speech model that produced the segments; a different model starts over. */
+  model: string;
 };
 
 /** Deterministic pseudo-random waveform so mock data looks natural and stable between renders. */

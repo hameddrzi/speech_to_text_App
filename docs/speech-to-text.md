@@ -45,12 +45,59 @@ whole recording at once, so it has more context and is more accurate.
   removed from both the live preview and the final transcript (`cleanText` in `engine.native.ts`).
   A recording with nothing left shows *No speech detected*.
 - Recordings are processed one at a time, so several new recordings simply wait their turn.
+- **Cancel** (detail screen, while transcribing) stops the native job (whisper.rn's `stop()`, wired
+  through an `AbortSignal` passed to `transcribeFile`) and sets the recording back to
+  `transcriptStatus: 'none'`, so *Transcribe* is offered again. The worker notices the recording
+  left `'processing'` (or was deleted) and aborts; it never overwrites what the user set.
+
+#### Long recordings are transcribed in chunks
+
+whisper.rn's `transcribe(path)` reads the **whole** WAV, converts it to float32 and builds the mel
+spectrogram of the entire file before decoding (`readWaveAudio` in `cpp/jsi/RNWhisperJSI.cpp`,
+`hostLoadFileBytes` in `android/src/main/jni.cpp`, `whisper_pcm_to_mel_with_state` in
+`whisper_full`). Its `offset` / `duration` options don't help: they only move whisper.cpp's seek
+window after everything is loaded. A 2-hour take needed 1.3–1.9 GB of RAM.
+
+So recordings **longer than 6 minutes** are chunked (`src/stt/chunking.ts`, pure and unit-tested;
+`transcribeChunked` in `engine.native.ts`):
+
+1. Only the WAV header is read to find the PCM data (an unpatched header from a crashed recording
+   falls back to the file size).
+2. The audio is planned in **5-minute** chunks (a tail under 30 s joins the last chunk). Each chunk
+   is read straight from disk (`File.open()` → `FileHandle.readBytes()` at an offset), starting
+   **1.5 s** before its nominal start so words cut at the boundary are heard whole, and passed to
+   `ctx.transcribeData()` as 16-bit PCM (9.6 MB per chunk).
+3. Segment times are shifted by the chunk's read start. Segments of the new chunk that start before
+   the last kept segment ends (minus 0.25 s) repeat the overlap and are dropped.
+4. The last ~200 characters of text so far are passed as Whisper's `prompt`, so context carries over.
+5. Progress is `(chunk index + chunk progress) / chunk count`.
+
+Memory is now flat: about 10 MB of PCM, ~20 MB of float samples and ~10–15 MB of mel per chunk on
+top of the model, whatever the length. Recordings up to 6 minutes keep the single `transcribe()`
+call. The whole chunked job holds the engine lock (`exclusive`), so a live preview never runs in the
+middle of a file: whisper.rn runs one job per context anyway, and holding it keeps the model loaded
+for the whole file.
+
+#### Crash and restart safety
+
+- Before every start the worker increments `transcriptAttempts` and waits until that change is
+  committed and flushed to disk (`flush()` from `useRecordings()`) before calling the engine.
+- After each chunk, the finished segments are saved in `transcriptPartial`
+  (`{ segments, nextOffsetSec, model }`). A job killed mid-file resumes from `nextOffsetSec` on the
+  next launch (only with the same speech model; another model starts over).
+- A recording found in `'processing'` with **2** attempts that never finished is set to `'failed'`
+  with *"Transcription stopped unexpectedly twice. Try a smaller speech model in Profile, or a
+  shorter recording."* instead of being restarted, so an out-of-memory job can't kill the app on
+  every launch.
+- Attempts and partial progress are cleared on success and Cancel; **Retry** resets the attempts
+  (and resumes the saved chunks if the model is unchanged).
 
 ## The engine: `engine.native.ts`
 
 whisper.rn allows **one job per model context at a time**, so the engine serializes all work:
 
-- `transcribeFile(uri, req)`: queued behind any running job (`exclusive`).
+- `transcribeFile(uri, req)`: queued behind any running job (`exclusive`). `req` also takes
+  `signal` (cancel), `resume` and `onChunk` (partial progress of long files).
 - `transcribePcmIfIdle(pcm, req)`: runs only if the engine is idle, otherwise returns `null`.
 
 The loaded model (the *context*) is kept in memory and reused. When the user switches models, the
@@ -146,5 +193,7 @@ Tips that help with any model:
 | Model download stuck | The app was sent to the background or the network dropped. Cancel and try again; the partial `.part` file is thrown away. |
 | Recording shows **Waiting** | No speech model is downloaded. Download one in **Profile → Transcription**; the recording is transcribed automatically. |
 | Recording shows **Retry** | The transcription failed; the reason is shown on the row. Tap Retry. |
+| *"Transcription stopped unexpectedly twice"* | The app was killed twice while transcribing this recording, usually out of memory on a phone with little RAM. Pick a smaller model (Small or Base) in **Profile → Transcription** and tap Retry. Long recordings resume from the last finished 5-minute chunk. |
+| Transcription takes too long | Open the recording and tap **Cancel**. It goes back to *No transcript yet*; tap Transcribe to start again, for example after switching to a smaller model. |
 | Live transcript stays empty | Check that *Live Transcript* is on and a model is downloaded. The first preview appears after about 1.5–3 s while the model loads. |
 | App won't install (`not enough space`) | The phone's storage is full. Free 1–2 GB; models need space too. |
